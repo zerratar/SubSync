@@ -5,30 +5,32 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SharpCompress.Archives;
-using SubSync.Proivders;
+using SubSync.Processors;
 
-namespace SubSync.Processors
+namespace SubSync
 {
-    internal class SubSyncWorker : ISubSyncWorker
+    internal class Worker : IWorker
     {
         private const int RetryLimit = 5;
         private readonly string filePath;
         private readonly ILogger logger;
-        private readonly ISubSyncWorkerQueue workerQueue;
-        private readonly ISubSyncSubtitleProvider subtitleProvider;
+        private readonly IWorkerQueue workerQueue;
+        private readonly ISubtitleProvider subtitleProvider;
         private readonly HashSet<string> subtitleExtensions;
         private static readonly HashSet<string> FileCompressionExtensions = new HashSet<string>
         {
             ".zip", ".rar", ".gzip", ".gz", ".7z", ".tar", ".tar.gz"
         };
 
+        private readonly TaskCompletionSource<object> taskCompletionSource = new TaskCompletionSource<object>();
+
         private int syncCount;
 
-        public SubSyncWorker(
+        public Worker(
             string filePath,
             ILogger logger,
-            ISubSyncWorkerQueue workerQueue,
-            ISubSyncSubtitleProvider subtitleProvider,
+            IWorkerQueue workerQueue,
+            ISubtitleProvider subtitleProvider,
             HashSet<string> subtitleExtensions)
         {
             this.filePath = filePath;
@@ -38,32 +40,44 @@ namespace SubSync.Processors
             this.subtitleExtensions = subtitleExtensions;
         }
 
-        public async Task SyncAsync()
+        public Task SyncAsync()
         {
-            var counter = Interlocked.Increment(ref this.syncCount);
-            var file = new FileInfo(filePath);
-            this.logger.WriteLine($"Synchronizing {file.Name}");
             try
             {
-                var directory = file.Directory?.FullName ?? "./";
-                var outputName = await subtitleProvider.GetAsync(file.Name, directory);
-                var extension = Path.GetExtension(outputName);
-                if (IsCompressed(extension))
-                {
-                    outputName = await DecompressAsync(outputName);
-                }
-
-                var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(file.Name));
-                this.logger.WriteLine($"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
+                return taskCompletionSource.Task;
             }
-            catch (Exception exc)
+            finally
             {
-                this.logger.Error($"Synchronization of {file.Name} failed with: ${exc.Message}");
-
-                if (counter <= RetryLimit)
+                Task.Factory.StartNew(async () =>
                 {
-                    this.workerQueue.Enqueue(this);
-                }
+                    var counter = Interlocked.Increment(ref this.syncCount);
+                    var file = new FileInfo(filePath);
+                    this.logger.WriteLine($"Synchronizing {file.Name}");
+                    try
+                    {
+                        var directory = file.Directory?.FullName ?? "./";
+                        var outputName = await subtitleProvider.GetAsync(file.Name, directory);
+                        var extension = Path.GetExtension(outputName);
+                        if (IsCompressed(extension))
+                        {
+                            outputName = await DecompressAsync(outputName);
+                        }
+
+                        var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(file.Name));
+                        this.logger.WriteLine($"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
+                    }
+                    catch (Exception exc)
+                    {
+                        this.logger.Error($"Synchronization of {file.Name} failed with: ${exc.Message}");
+
+                        if (counter <= RetryLimit)
+                        {
+                            this.workerQueue.Enqueue(this);
+                        }
+                    }
+
+                    this.taskCompletionSource.SetResult(true);
+                }, TaskCreationOptions.LongRunning);
             }
         }
 
@@ -120,7 +134,7 @@ namespace SubSync.Processors
                             continue;
                         }
 
-                        targetFile = Path.Combine(directory, Path.ChangeExtension(entry.Key, ext));
+                        targetFile = Path.Combine(directory, Path.ChangeExtension(entry.Key.Replace("?", ""), ext));
                         var dir = new FileInfo(targetFile).Directory;
                         if (dir != null && !dir.Exists)
                         {

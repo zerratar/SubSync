@@ -1,70 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace SubSync.Proivders
+namespace SubSync
 {
-    internal class SubsceneSubtitleProvider : ISubSyncSubtitleProvider
+    internal abstract class SubtitleProviderBase : ISubtitleProvider
     {
-        private readonly HashSet<string> languages;
-        private const string SearchApiUrlFormat = "https://subscene.com/subtitles/release?q={0}&r=true";
-        private const string SubtitleApiUrlFormat = "https://subscene.com/{0}";
-
-        private const int RequestRetryLimit = 3;
-        private const int RequestTimeout = 3000;
-
-        public SubsceneSubtitleProvider(HashSet<string> languages)
+        protected readonly HashSet<string> Languages;
+        
+        protected SubtitleProviderBase(HashSet<string> languages)
         {
-            this.languages = languages;
+            this.Languages = languages;
         }
 
-        public async Task<string> GetAsync(string name, string outputDirectory)
-        {
-            var url = await FindAsync(name);
-            if (string.IsNullOrEmpty(url))
-            {
-                throw new Exception($"No subtitles for {name} could befound");
-            }
+        protected abstract int RequestRetryLimit { get; }
 
-            var subtitlePageContent = await DownloadStringAsync(url);
-            foreach (var language in this.languages)
-            {
-                var match = Regex.Match(subtitlePageContent, $@"\/subtitles\/{language}-text\/[a-zA-Z0-9_-]*");
-                if (match.Success)
-                {
-                    var downloadUrl = string.Format(SubtitleApiUrlFormat, match.Value);
-                    return await DownloadFileAsync(downloadUrl, outputDirectory);
-                }
-            }
+        protected abstract int RequestTimeout { get; }
 
-            return null;
-        }
+        public abstract Task<string> GetAsync(string name, string outputDirectory);
 
-        private async Task<string> FindAsync(string name)
-        {
-            var searchName = GetUrlFriendlyName(name);
-            var searchUrl = string.Format(SearchApiUrlFormat, searchName);
-            var searchPageContent = await DownloadStringAsync(searchUrl);
-
-            foreach (var language in this.languages)
-            {
-                var match = Regex.Match(searchPageContent, $@"\/subtitles\/.*\/{language}\/[0-9]+");
-
-                if (match.Success)
-                {
-                    return string.Format(SubtitleApiUrlFormat, match.Value);
-                }
-            }
-            return null;
-        }
-
-
-        private async Task<string> DownloadFileAsync(string url, string outputDirectory, int retryCount = 0)
+        protected async Task<string> DownloadFileAsync(string url, string outputDirectory, int retryCount = 0)
         {
             try
             {
@@ -81,12 +39,10 @@ namespace SubSync.Proivders
                             filename = newFileName;
                     }
 
-
-
                     var outputFile = System.IO.Path.Combine(outputDirectory, filename);
                     using (var stream = response.GetResponseStream())
                     {
-                        var file = new FileInfo(outputFile);                        
+                        var file = new FileInfo(outputFile);
                         using (var output = file.Create())
                         {
                             int read = 0;
@@ -119,7 +75,7 @@ namespace SubSync.Proivders
             }
         }
 
-        private async Task<string> DownloadStringAsync(string url, int retryCount = 0)
+        protected async Task<string> DownloadStringAsync(string url, int retryCount = 0)
         {
             try
             {
@@ -150,7 +106,7 @@ namespace SubSync.Proivders
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static string GetUrlFriendlyName(string name)
+        protected static string GetUrlFriendlyName(string name)
         {
             return WebUtility.UrlEncode(Path.GetFileNameWithoutExtension(name));
         }

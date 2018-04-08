@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using SubSync.Processors;
-using SubSync.Proivders;
 
 namespace SubSync
 {
@@ -14,7 +13,7 @@ namespace SubSync
         {
             var input = "./";
             var videoExtensions = ParseList("*.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm");
-            var subtitleExtensions = ParseList("*.srt;*.txt;*.sub;*.idx;*.ssa");            
+            var subtitleExtensions = ParseList("*.srt;*.txt;*.sub;*.idx;*.ssa");
             var languages = ParseList("english");
 
             if (args.Length > 0 && !string.IsNullOrEmpty(args[0]))
@@ -34,10 +33,16 @@ namespace SubSync
 
             var version = GetVersion();
             var logger = new ConsoleLogger();
-            var downloader = new SubsceneSubtitleProvider(languages);
-            var subSyncWorkerProvider = new SubSyncWorkerProvider(logger, downloader, subtitleExtensions);
-            var subSyncWorkerQueue = new SubSyncWorkerQueue(subSyncWorkerProvider);            
-            using (var mediaWatcher = new SubSyncMediaWatcher(logger, subSyncWorkerQueue, input, videoExtensions, subtitleExtensions))
+
+            var fallbackSubtitleProvider = new FallbackSubtitleProvider(
+                    //new OpenSubtitles(languages),
+                    new Subscene(languages)
+                );
+
+            var subSyncWorkerProvider = new WorkerProvider(logger, subtitleExtensions, fallbackSubtitleProvider);
+            var subSyncWorkerQueue = new WorkerQueue(subSyncWorkerProvider);
+
+            using (var mediaWatcher = new FileSystemWatcher(logger, subSyncWorkerQueue, input, videoExtensions, subtitleExtensions))
             {
 
                 logger.WriteLine("╔═════════════════════════════════════════════════════╗");

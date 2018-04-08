@@ -6,19 +6,19 @@ using SubSync.Extensions;
 
 namespace SubSync.Processors
 {
-    internal class SubSyncMediaWatcher : ISubSyncMediaWatcher
+    internal class FileSystemWatcher : IFileSystemWatcher
     {
         private readonly ILogger logger;
-        private readonly ISubSyncWorkerQueue workerQueue;
+        private readonly IWorkerQueue workerQueue;
         private readonly string input;
         private readonly HashSet<string> videoExtensions;
         private readonly HashSet<string> subtitleExtensions;
-        private FileSystemWatcher fsWatcher;
+        private System.IO.FileSystemWatcher fsWatcher;
         private bool disposed;
 
-        public SubSyncMediaWatcher(
+        public FileSystemWatcher(
             ILogger logger,
-            ISubSyncWorkerQueue workerQueue,
+            IWorkerQueue workerQueue,
             string input,
             HashSet<string> videoExtensions,
             HashSet<string> subtitleExtensions)
@@ -41,7 +41,7 @@ namespace SubSync.Processors
         public void Start()
         {
             if (this.fsWatcher != null) return;
-            this.fsWatcher = new FileSystemWatcher(this.input, "*.*");
+            this.fsWatcher = new System.IO.FileSystemWatcher(this.input, "*.*");
             this.fsWatcher.Error += FsWatcherOnError;
             this.fsWatcher.IncludeSubdirectories = true;
             this.fsWatcher.EnableRaisingEvents = true;
@@ -66,11 +66,8 @@ namespace SubSync.Processors
 
         public void SyncAll()
         {
-
-            this.videoExtensions.SelectMany(y =>
-                    new DirectoryInfo(this.input).GetFiles($"*{y}", SearchOption.AllDirectories))
-                    .Select(x => x.FullName)
-                //Directory.GetFiles(this.input, $"*{y}", SearchOption.AllDirectories))
+            var directoryInfo = new DirectoryInfo(this.input);
+            this.videoExtensions.SelectMany(y => directoryInfo.GetFiles($"*{y}", SearchOption.AllDirectories)).Select(x => x.FullName)
                 .ForEach(Sync);
         }
 

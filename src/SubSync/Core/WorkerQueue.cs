@@ -1,22 +1,25 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SubSync.Proivders;
+using System.Threading.Tasks.Dataflow;
 
 namespace SubSync.Processors
 {
-    internal class SubSyncWorkerQueue : ISubSyncWorkerQueue
+    internal class WorkerQueue : IWorkerQueue
     {
-        private const int ConcurrentWorkers = 3;
-        private readonly ISubSyncWorkerProvider workerProvider;
-        private readonly ConcurrentQueue<ISubSyncWorker> queue = new ConcurrentQueue<ISubSyncWorker>();
+        private const int ConcurrentWorkers = 7;
+        private readonly IWorkerProvider workerProvider;
+        private readonly ConcurrentQueue<IWorker> queue = new ConcurrentQueue<IWorker>();
         private readonly Thread workerThread;
         private bool enabled;
         private bool disposed;
 
-        public SubSyncWorkerQueue(ISubSyncWorkerProvider workerProvider)
+        private int currentJobCount = 0;
+
+        public WorkerQueue(IWorkerProvider workerProvider)
         {
             this.workerProvider = workerProvider;
             this.workerThread = new Thread(ProcessQueue);
@@ -34,7 +37,7 @@ namespace SubSync.Processors
             this.Enqueue(this.workerProvider.GetWorker(this, fullFilePath));
         }
 
-        public void Enqueue(ISubSyncWorker worker)
+        public void Enqueue(IWorker worker)
         {
             queue.Enqueue(worker);
         }

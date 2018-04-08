@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace SubSync.Processors
+namespace SubSync
 {
-    internal interface ISubSyncWorker : IDisposable
+    internal interface IWorker : IDisposable
     {
         Task SyncAsync();
     }

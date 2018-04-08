@@ -2,10 +2,10 @@
 
 namespace SubSync.Processors
 {
-    internal interface ISubSyncWorkerQueue : IDisposable
+    internal interface IWorkerQueue : IDisposable
     {
         void Enqueue(string fullFilePath);
-        void Enqueue(ISubSyncWorker worker);
+        void Enqueue(IWorker worker);
         void Start();
         void Stop();
     }

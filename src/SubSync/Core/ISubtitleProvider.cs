@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
 
-namespace SubSync.Proivders
+namespace SubSync
 {
-    internal interface ISubSyncSubtitleProvider
+    internal interface ISubtitleProvider
     {
         Task<string> GetAsync(string name, string outputDirectory);
     }

@@ -1,27 +1,27 @@
 ﻿using System.Collections.Generic;
 using SubSync.Processors;
 
-namespace SubSync.Proivders
+namespace SubSync
 {
-    internal class SubSyncWorkerProvider : ISubSyncWorkerProvider
+    internal class WorkerProvider : IWorkerProvider
     {
         private readonly ILogger logger;
-        private readonly ISubSyncSubtitleProvider subtitleProvider;
+        private readonly ISubtitleProvider subtitleProvider;
         private readonly HashSet<string> subtitleExtensions;
 
-        public SubSyncWorkerProvider(
+        public WorkerProvider(
             ILogger logger,
-            ISubSyncSubtitleProvider subtitleProvider,            
-            HashSet<string> subtitleExtensions)
+            HashSet<string> subtitleExtensions,
+            ISubtitleProvider subtitleProvider)
         {
             this.logger = logger;
             this.subtitleProvider = subtitleProvider;
             this.subtitleExtensions = subtitleExtensions;
         }
 
-        public ISubSyncWorker GetWorker(ISubSyncWorkerQueue queue, string file)
+        public IWorker GetWorker(IWorkerQueue queue, string file)
         {
-            return new SubSyncWorker(
+            return new Worker(
                 file,
                 this.logger,
                 queue,

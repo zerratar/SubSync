@@ -2,7 +2,7 @@
 
 namespace SubSync.Processors
 {
-    internal interface ISubSyncMediaWatcher : IDisposable
+    internal interface IFileSystemWatcher : IDisposable
     {
         void Start();
         void Stop();
