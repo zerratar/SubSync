@@ -86,8 +86,8 @@ namespace SubSync.Proivders
                     var outputFile = System.IO.Path.Combine(outputDirectory, filename);
                     using (var stream = response.GetResponseStream())
                     {
-                        var file = new ZetaLongPaths.ZlpFileInfo(outputFile);                        
-                        using (var output = file.OpenCreate())
+                        var file = new FileInfo(outputFile);                        
+                        using (var output = file.Create())
                         {
                             int read = 0;
                             var buffer = new byte[4096];

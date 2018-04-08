@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using SubSync.Extensions;
-using FileInfo = ZetaLongPaths.ZlpFileInfo;
-using DirectoryInfo = ZetaLongPaths.ZlpDirectoryInfo;
 
 namespace SubSync.Processors
 {

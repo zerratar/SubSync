@@ -6,8 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using SharpCompress.Archives;
 using SubSync.Proivders;
-using FileInfo = ZetaLongPaths.ZlpFileInfo;
-using DirectoryInfo = ZetaLongPaths.ZlpDirectoryInfo;
 
 namespace SubSync.Processors
 {
@@ -131,7 +129,7 @@ namespace SubSync.Processors
 
                         var targetFileInfo = new FileInfo(targetFile);
                         using (var entryStream = entry.OpenEntryStream())
-                        using (var sw = targetFileInfo.OpenCreate())//new FileStream(targetFile, FileMode.Create))
+                        using (var sw = targetFileInfo.Create())//new FileStream(targetFile, FileMode.Create))
                         {
                             var read = 0;
                             var buffer = new byte[4096];

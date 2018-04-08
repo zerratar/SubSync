@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2011
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubSync", "src\SubSync\SubSync.csproj", "{C342F76F-3D4C-487A-85B5-248DE4A4DC22}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubSync", "src\SubSync\SubSync.csproj", "{A1B8C57E-2B99-4D21-A35E-D050F3BA279B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +15,10 @@ Global
 		{C342F76F-3D4C-487A-85B5-248DE4A4DC22}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C342F76F-3D4C-487A-85B5-248DE4A4DC22}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C342F76F-3D4C-487A-85B5-248DE4A4DC22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B8C57E-2B99-4D21-A35E-D050F3BA279B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B8C57E-2B99-4D21-A35E-D050F3BA279B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B8C57E-2B99-4D21-A35E-D050F3BA279B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B8C57E-2B99-4D21-A35E-D050F3BA279B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
