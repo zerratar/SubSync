@@ -9,6 +9,10 @@ It works by using the filename of the movie to determine the name and use that t
 
 SubSync will also prefer a chosen language over the other, so for me I prefer Swedish but if that one does not exist I want English, you can set this as a startup argument.
 
+**Note:**
+This tool was created with just a couple of hours so be aware that it may not always work perfectly.
+I do appraciate any problems you may stumble upon either code-wise or functionality when/or if testing this application out. Don't be afraid to add an issue!
+
 ## Building SubSync
 Load up Visual Studio 2017, open SubSync.sln and hit CTRL+SHIFT+B like your life depends on it!
 
