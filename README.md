@@ -13,6 +13,10 @@ SubSync will also prefer a chosen language over the other, so for me I prefer Sw
 This tool was created with just a couple of hours so be aware that it may not always work perfectly.
 I do appraciate any problems you may stumble upon either code-wise or functionality when/or if testing this application out. Don't be afraid to add an issue!
 
+## Binaries
+You can download the somewhat latest binaries here
+http://www.shinobytes.com/files/SubSync-binaries-win32.zip
+
 ## Building SubSync
 Load up Visual Studio 2017, open SubSync.sln and hit CTRL+SHIFT+B like your life depends on it!
 

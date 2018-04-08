@@ -12,7 +12,7 @@ namespace SubSync
     {
         static void Main(string[] args)
         {
-            var input = "";
+            var input = "./";
             var videoExtensions = ParseList("*.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm");
             var subtitleExtensions = ParseList("*.srt;*.txt;*.sub;*.idx;*.ssa");            
             var languages = ParseList("english");
@@ -40,11 +40,11 @@ namespace SubSync
             using (var mediaWatcher = new SubSyncMediaWatcher(logger, subSyncWorkerQueue, input, videoExtensions, subtitleExtensions))
             {
 
-                logger.WriteLine("╔═══════════════════════════════════════════════════════════╗");
-                logger.WriteLine("║  @whi@SubSync v" + version.PadRight(30 - version.Length) + "@gray@                         ║");
-                logger.WriteLine("║  -------------------------------------------------------  ║");
-                logger.WriteLine("║  Copyright (c) 2018, Karl Johansson - zerratar\\@gmail.com  ║");
-                logger.WriteLine("╚═══════════════════════════════════════════════════════════╝");
+                logger.WriteLine("╔═════════════════════════════════════════════════════╗");
+                logger.WriteLine("║       @whi@SubSync v" + version.PadRight(30 - version.Length) + "@gray@              ║");
+                logger.WriteLine("║       ---------------------------------------       ║");
+                logger.WriteLine("║       Copyright (c) 2018 zerratar\\@gmail.com         ║");
+                logger.WriteLine("╚═════════════════════════════════════════════════════╝");
                 //logger.WriteLine("║╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗║");
                 //logger.WriteLine("╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝");
                 logger.WriteLine("");
