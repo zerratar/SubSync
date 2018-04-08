@@ -68,8 +68,11 @@ namespace SubSync.Processors
 
         public void SyncAll()
         {
-            this.videoExtensions.SelectMany(y => Directory
-                .GetFiles(this.input, $"*{y}", SearchOption.AllDirectories))
+
+            this.videoExtensions.SelectMany(y =>
+                    new DirectoryInfo(this.input).GetFiles($"*{y}", SearchOption.AllDirectories))
+                    .Select(x => x.FullName)
+                //Directory.GetFiles(this.input, $"*{y}", SearchOption.AllDirectories))
                 .ForEach(Sync);
         }
 

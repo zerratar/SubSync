@@ -73,9 +73,11 @@ namespace SubSync.Processors
 
         private string Rename(string fileToRename, string newFilaNameWithoutExtension)
         {
-            var directory = new FileInfo(fileToRename).Directory?.FullName ?? "./";
+            var inFile = new FileInfo(fileToRename);
+            var directory = inFile.Directory?.FullName ?? "./";
             var destFileName = Path.Combine(directory, newFilaNameWithoutExtension + Path.GetExtension(fileToRename));
-            File.Move(fileToRename, destFileName);
+            inFile.MoveTo(destFileName);
+            //File.Move(fileToRename, destFileName);
             return destFileName;
         }
 
@@ -96,7 +98,7 @@ namespace SubSync.Processors
             }
         }
 
-        private async Task<string> DecompressArchive(string filename, Func<string, IArchive> archiveOpener)
+        private async Task<string> DecompressArchive(string filename, Func<Stream, IArchive> archiveOpener)
         {
             var file = new FileInfo(filename);
             var targetFile = string.Empty;
@@ -104,7 +106,8 @@ namespace SubSync.Processors
             {
                 var fileDirectory = file.Directory;
                 var directory = fileDirectory?.FullName ?? "./";
-                using (var reader = archiveOpener(filename))
+                using (var fileReader = file.OpenRead())
+                using (var reader = archiveOpener(fileReader))
                 {
                     foreach (var entry in reader.Entries)
                     {
@@ -126,8 +129,9 @@ namespace SubSync.Processors
                             dir.Create();
                         }
 
+                        var targetFileInfo = new FileInfo(targetFile);
                         using (var entryStream = entry.OpenEntryStream())
-                        using (var sw = new FileStream(targetFile, FileMode.Create))
+                        using (var sw = targetFileInfo.OpenCreate())//new FileStream(targetFile, FileMode.Create))
                         {
                             var read = 0;
                             var buffer = new byte[4096];
@@ -154,8 +158,8 @@ namespace SubSync.Processors
 
         private Task<string> DecompressRarAsync(string filename) => DecompressArchive(filename, x => SharpCompress.Archives.Rar.RarArchive.Open(x));
         private Task<string> DecompressZipAsync(string filename) => DecompressArchive(filename, x => SharpCompress.Archives.Zip.ZipArchive.Open(x));
-        private Task<string> DecompressGZipAsync(string filename) =>DecompressArchive(filename, x => SharpCompress.Archives.GZip.GZipArchive.Open(x));
-        private Task<string> Decompress7ZipAsync(string filename) =>DecompressArchive(filename, x => SharpCompress.Archives.SevenZip.SevenZipArchive.Open(x));
+        private Task<string> DecompressGZipAsync(string filename) => DecompressArchive(filename, x => SharpCompress.Archives.GZip.GZipArchive.Open(x));
+        private Task<string> Decompress7ZipAsync(string filename) => DecompressArchive(filename, x => SharpCompress.Archives.SevenZip.SevenZipArchive.Open(x));
         private Task<string> DecompressTarAsync(string filename) => DecompressArchive(filename, x => SharpCompress.Archives.Tar.TarArchive.Open(x));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

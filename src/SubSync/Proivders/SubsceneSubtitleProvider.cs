@@ -81,19 +81,24 @@ namespace SubSync.Proivders
                             filename = newFileName;
                     }
 
+
+
                     var outputFile = System.IO.Path.Combine(outputDirectory, filename);
                     using (var stream = response.GetResponseStream())
-                    using (var output = new FileStream(outputFile, FileMode.Create))
                     {
-                        int read = 0;
-                        var buffer = new byte[4096];
-
-                        while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) != 0)
+                        var file = new ZetaLongPaths.ZlpFileInfo(outputFile);                        
+                        using (var output = file.OpenCreate())
                         {
-                            await output.WriteAsync(buffer, 0, read);
-                        }
+                            int read = 0;
+                            var buffer = new byte[4096];
 
-                        return outputFile;
+                            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) != 0)
+                            {
+                                await output.WriteAsync(buffer, 0, read);
+                            }
+
+                            return outputFile;
+                        }
                     }
                 }
             }
