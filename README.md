@@ -14,7 +14,10 @@ This tool was created with just a couple of hours so be aware that it may not al
 I do appraciate any problems you may stumble upon either code-wise or functionality when/or if testing this application out. Don't be afraid to add an issue!
 
 ## Binaries
-You can download the somewhat latest binaries here
+You can download the somewhat latest binaries from the release tab thingy
+https://github.com/zerratar/SubSync/releases
+
+Mirror mirror on the wall
 http://www.shinobytes.com/files/SubSync-binaries-win32.zip
 
 ## Building SubSync
@@ -62,10 +65,15 @@ Press 'a' to try and re-sync any previously unsyced subtitles. Yes the subtitle 
 Oh, and be sure to bring popcorns or your favorite snacks when watching your movies!
 
 ## Changes
-### v0.1.1 - 2018-04-08
-Update the usage of all FileInfo and Directoryinfo instances to use the ZetaLongPaths available from here https://github.com/UweKeim/ZetaLongPaths to *crosses my fingers* fix the bug caused by too long paths.
+### v0.1.2
+Update the usage of all FileInfo and Directoryinfo instances to use the ZetaLongPaths available from here https://github.com/UweKeim/ZetaLongPaths to fix the bug caused by too long paths.
 
-I never tested it properly, but I also ensured to catch any of those exceptions thrown as well.
+### v0.1.1
+This version didn't like anyone.
 
-### v0.1.0 - 2018-04-08
+### v0.1.0
 Initial release on github, you know the magical first version
+
+## Todo
+Add support for OpenSubtitles as a subtitle provider
+Add support for http://www.yifysubtitles.com/
