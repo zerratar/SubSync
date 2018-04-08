@@ -85,15 +85,15 @@ namespace SubSync
             this.logger.WriteLine($"");
             this.logger.WriteLine($" ═════════════════════════════════════════════════════");
             this.logger.WriteLine($"");
-            this.logger.WriteLine($" @whi@Synchronization completed with a total of @yel@{total} @whi@video(s) processed.");            
-            
+            this.logger.WriteLine($" @whi@Synchronization completed with a total of @yel@{total} @whi@video(s) processed.");
+
             if (success > 0)
             {
                 this.logger.WriteLine($"    @green@{success} @whi@video(s) was successefully was synchronized.");
             }
             if (failed > 0)
             {
-                this.logger.WriteLine($"    @red@{success} @whi@video(s) failed to synchronize.");
+                this.logger.WriteLine($"    @red@{failed} @whi@video(s) failed to synchronize.");
             }
             this.logger.WriteLine($"    {skipcount} video(s) was skipped.");
         }

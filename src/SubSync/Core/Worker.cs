@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -73,20 +74,27 @@ namespace SubSync
                             }
 
                             var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(file.Name));
-                            this.logger.WriteLine($"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
+                            this.logger.WriteLine(
+                                $"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
+                            Interlocked.Decrement(ref this.syncCount);
+                            this.taskCompletionSource.SetResult(true);
+                        }
+                        catch (NestedArchiveNotSupportedException nexc)
+                        {
+                            this.logger.Error($"Synchronization of {file.Name} failed with: {nexc.Message}");
+                            this.taskCompletionSource.SetException(nexc);
                         }
                         catch (Exception exc)
                         {
-                            this.logger.Error($"Synchronization of {file.Name} failed with: ${exc.Message}");
+                            this.logger.Error($"Synchronization of {file.Name} failed with: {exc.Message}");
 
                             if (counter <= RetryLimit)
                             {
-                                this.workerQueue.Enqueue(this);
+                                this.workerQueue.Enqueue(filePath); // (this);
                             }
+                            this.taskCompletionSource.SetException(exc);
                         }
 
-                        Interlocked.Decrement(ref this.syncCount);
-                        this.taskCompletionSource.SetResult(true);
                     }, TaskCreationOptions.LongRunning);
                 }
             }
@@ -134,37 +142,24 @@ namespace SubSync
                 {
                     foreach (var entry in reader.Entries)
                     {
-                        var ext = Path.GetExtension(entry.Key);
-                        if (entry.Key.ToLower().EndsWith(".srt.txt"))
+                        var result = await UnpackSubtitleEntryAsync(entry, directory);
+                        if (result.SubtitleFound)
                         {
-                            ext = ".srt";
+                            targetFile = result.Filename;
+                            return result.Filename;
                         }
+                    }
 
-                        if (ext == null || !this.subtitleExtensions.Contains(ext.ToLower()))
-                        {
-                            continue;
-                        }
-
-                        targetFile = Path.Combine(directory, Path.ChangeExtension(entry.Key.Replace("?", ""), ext));
-                        var dir = new FileInfo(targetFile).Directory;
-                        if (dir != null && !dir.Exists)
-                        {
-                            dir.Create();
-                        }
-
-                        var targetFileInfo = new FileInfo(targetFile);
-                        using (var entryStream = entry.OpenEntryStream())
-                        using (var sw = targetFileInfo.Create())//new FileStream(targetFile, FileMode.Create))
-                        {
-                            var read = 0;
-                            var buffer = new byte[4096];
-                            while ((read = await entryStream.ReadAsync(buffer, 0, buffer.Length)) != 0)
-                            {
-                                await sw.WriteAsync(buffer, 0, read);
-                            }
-
-                            return targetFile;
-                        }
+                    // TODO: This need to match the subtitles to determine whether its for the right video or not.
+                    // check if any of the entries are archives and unpack it if one exists.
+                    var archive = reader.Entries.FirstOrDefault(x => IsCompressed(System.IO.Path.GetExtension(x.Key)));
+                    if (archive != null)
+                    {
+                        logger.WriteLine($"@yel@Warning: Nested archive found inside '{filename}', output subtitle may not be correct!");                        
+                        var result = await UnpackEntryAsync(archive, directory);
+                        targetFile = result.Filename;
+                        return await DecompressAsync(result.Filename);
+                        //throw new NestedArchiveNotSupportedException(filename);
                     }
                 }
             }
@@ -179,6 +174,51 @@ namespace SubSync
             throw new FileNotFoundException($"No suitable subtitle found in the downloaded archive, {filename}. Archive kept just in case.");
         }
 
+
+        private async Task<EntryUnpackResult> UnpackSubtitleEntryAsync(IArchiveEntry entry, string directory)
+        {
+            var ext = Path.GetExtension(entry.Key);
+            if (entry.Key.ToLower().EndsWith(".srt.txt"))
+            {
+                ext = ".srt";
+            }
+
+            var subtitleFound = this.subtitleExtensions.Contains(ext?.ToLower());
+            if (!subtitleFound)
+            {
+                return new EntryUnpackResult(subtitleFound: false, filename: null, entry: entry.Key);
+            }
+
+            return await UnpackEntryAsync(entry, directory);
+        }
+
+        private async Task<EntryUnpackResult> UnpackEntryAsync(IArchiveEntry entry, string directory)
+        {
+            var ext = Path.GetExtension(entry.Key);
+            if (entry.Key.ToLower().EndsWith(".srt.txt")) ext = ".srt";
+            var subtitleFound = this.subtitleExtensions.Contains(ext?.ToLower());
+            var targetFile = Path.Combine(directory, Path.ChangeExtension(entry.Key.Replace("?", ""), ext));
+            var dir = new FileInfo(targetFile).Directory;
+            if (dir != null && !dir.Exists)
+            {
+                dir.Create();
+            }
+
+            var targetFileInfo = new FileInfo(targetFile);
+            using (var entryStream = entry.OpenEntryStream())
+            using (var sw = targetFileInfo.Create())//new FileStream(targetFile, FileMode.Create))
+            {
+                var read = 0;
+                var buffer = new byte[4096];
+                while ((read = await entryStream.ReadAsync(buffer, 0, buffer.Length)) != 0)
+                {
+                    await sw.WriteAsync(buffer, 0, read);
+                }
+
+                return new EntryUnpackResult(subtitleFound: subtitleFound, filename: targetFile, entry: entry.Key);
+            }
+        }
+
         private Task<string> DecompressRarAsync(string filename) => DecompressArchive(filename, x => SharpCompress.Archives.Rar.RarArchive.Open(x));
         private Task<string> DecompressZipAsync(string filename) => DecompressArchive(filename, x => SharpCompress.Archives.Zip.ZipArchive.Open(x));
         private Task<string> DecompressGZipAsync(string filename) => DecompressArchive(filename, x => SharpCompress.Archives.GZip.GZipArchive.Open(x));
@@ -187,5 +227,27 @@ namespace SubSync
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsCompressed(string extension) => FileCompressionExtensions.Contains(extension.ToLower());
+
+        private struct EntryUnpackResult
+        {
+            public readonly bool SubtitleFound;
+            public readonly string Filename;
+            public readonly string Entry;
+
+            public EntryUnpackResult(bool subtitleFound, string filename, string entry)
+            {
+                this.SubtitleFound = subtitleFound;
+                this.Filename = filename;
+                this.Entry = entry;
+            }
+        }
+    }
+
+    internal class NestedArchiveNotSupportedException : Exception
+    {
+        public NestedArchiveNotSupportedException(string filename)
+            : base($"Downloaded archive, '{filename}' @red@contain another archive within it and cannot properly be extracted. Archive kept for manual labor.")
+        {
+        }
     }
 }

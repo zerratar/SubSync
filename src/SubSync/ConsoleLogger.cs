@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace SubSync
 {
     internal class ConsoleLogger : ILogger
     {
         private readonly object writelock = new object();
+
+        public ConsoleLogger()
+        {
+            Console.OutputEncoding = Encoding.Unicode;
+        }
 
         public void Write(string message)
         {
@@ -22,7 +28,7 @@ namespace SubSync
         {
             WriteLine($"@{ConsoleColor.Red}@{errorMessage}");
         }
-        
+
         private void WriteLineOperations(IReadOnlyList<ConsoleWriteOperation> operations)
         {
             WriteOperations(operations, true);
