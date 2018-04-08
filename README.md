@@ -31,6 +31,19 @@ SubSync.exe <input folder> [<languages>] [<video extensions>]
                     *.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm
 ```
 
+In most cases you will probably only need to run it like this:
+
+```batch
+SubSync.exe "D:\My Awesome Movies\"
+```
+
+Or if you want to have your subtitles in another language (if one exists) and you're
+crazy enough to think you will want Latin before English.
+
+```batch
+SubSync.exe "D:\My Awesome Movies\" spanish;japanese;latin;english
+```
+
 Now keep it running in the background. Its not going to hog up your cpu. Its pretty friendly, and you can be sure to have subtitles available for you whenever you need it!
 
 ## Tips and tricks
