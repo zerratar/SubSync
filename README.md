@@ -13,7 +13,7 @@ SubSync will also prefer a chosen language over the other, so for me I prefer Sw
 Load up Visual Studio 2017, open SubSync.sln and hit CTRL+SHIFT+B like your life depends on it!
 
 ## Running SubSync
-``batch
+```batch
 SubSync.exe <input folder> [<languages>] [<video extensions>]
 
 <input folder>: So this is the folder you want to watch, it will also watch all its subfolders.                   As an example: 'D:\Movies'
@@ -28,7 +28,7 @@ SubSync.exe <input folder> [<languages>] [<video extensions>]
 <video extensions>: A list of video extensions to watch seperated by a semi-colon, just add
                     all you can think of. But this is an optional and default value is:
                     *.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm
-``
+```
 
 Now keep it running in the background. Its not going to hog up your cpu. Its pretty friendly, and you can be sure to have subtitles available for you whenever you need it!
 
