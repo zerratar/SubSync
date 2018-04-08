@@ -16,7 +16,8 @@ Load up Visual Studio 2017, open SubSync.sln and hit CTRL+SHIFT+B like your life
 ```batch
 SubSync.exe <input folder> [<languages>] [<video extensions>]
 
-<input folder>: So this is the folder you want to watch, it will also watch all its subfolders.                   As an example: 'D:\Movies'
+<input folder>: So this is the folder you want to watch, it will also watch all its subfolders.
+                As an example: 'D:\Movies'
 
 <languages>: A list of languages separated by a semi-colon. Example: swedish;english
              The priority of the languages is from left to right, so in this example if 
