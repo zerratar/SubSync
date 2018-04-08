@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using SubSync.Extensions;
 
-namespace SubSync.Processors
+namespace SubSync
 {
-    internal class FileSystemWatcher : IFileSystemWatcher
+    internal class SubtitleSynchronizer : IFileSystemWatcher
     {
         private readonly ILogger logger;
         private readonly IWorkerQueue workerQueue;
@@ -15,8 +16,9 @@ namespace SubSync.Processors
         private readonly HashSet<string> subtitleExtensions;
         private System.IO.FileSystemWatcher fsWatcher;
         private bool disposed;
+        private int skipped = 0;
 
-        public FileSystemWatcher(
+        public SubtitleSynchronizer(
             ILogger logger,
             IWorkerQueue workerQueue,
             string input,
@@ -50,6 +52,8 @@ namespace SubSync.Processors
                                           NotifyFilters.Size | NotifyFilters.Security;
 
             this.fsWatcher.Created += FileCreated;
+            this.fsWatcher.Renamed += FileCreated;
+            this.workerQueue.QueueCompleted += ResultReport;
             this.workerQueue.Start();
             this.SyncAll();
         }
@@ -57,11 +61,41 @@ namespace SubSync.Processors
         public void Stop()
         {
             if (this.fsWatcher == null) return;
+            this.workerQueue.QueueCompleted -= ResultReport;
             this.workerQueue.Stop();
             this.fsWatcher.Error -= FsWatcherOnError;
             this.fsWatcher.Created -= FileCreated;
+            this.fsWatcher.Renamed -= FileCreated;
             this.fsWatcher.Dispose();
             this.fsWatcher = null;
+        }
+
+        private void ResultReport(object sender, QueueCompletedEventArgs e)
+        {
+            var skipcount = Interlocked.Exchange(ref skipped, 0);
+            var total = e.Total;
+            var failed = e.Failed;
+            var success = e.Succeeded;
+
+            if (total == 0 && skipcount == 0)
+            {
+                return;
+            }
+
+            this.logger.WriteLine($"");
+            this.logger.WriteLine($" ═════════════════════════════════════════════════════");
+            this.logger.WriteLine($"");
+            this.logger.WriteLine($" @whi@Synchronization completed with a total of @yel@{total} @whi@video(s) processed.");            
+            
+            if (success > 0)
+            {
+                this.logger.WriteLine($"    @green@{success} @whi@video(s) was successefully was synchronized.");
+            }
+            if (failed > 0)
+            {
+                this.logger.WriteLine($"    @red@{success} @whi@video(s) failed to synchronize.");
+            }
+            this.logger.WriteLine($"    {skipcount} video(s) was skipped.");
         }
 
         public void SyncAll()
@@ -77,6 +111,7 @@ namespace SubSync.Processors
             {
                 if (IsSynchronized(fullFilePath))
                 {
+                    Interlocked.Increment(ref skipped);
                     return;
                 }
 

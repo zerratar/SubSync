@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SharpCompress.Archives;
-using SubSync.Processors;
 
 namespace SubSync
 {
@@ -22,7 +21,7 @@ namespace SubSync
             ".zip", ".rar", ".gzip", ".gz", ".7z", ".tar", ".tar.gz"
         };
 
-        private readonly TaskCompletionSource<object> taskCompletionSource = new TaskCompletionSource<object>();
+        private TaskCompletionSource<object> taskCompletionSource;
 
         private int syncCount;
 
@@ -42,42 +41,54 @@ namespace SubSync
 
         public Task SyncAsync()
         {
+            if (taskCompletionSource == null
+                || taskCompletionSource.Task.Status == TaskStatus.RanToCompletion
+                || taskCompletionSource.Task.Status == TaskStatus.Canceled
+                || taskCompletionSource.Task.Status == TaskStatus.Faulted)
+            {
+                taskCompletionSource = new TaskCompletionSource<object>();
+            }
+
             try
             {
                 return taskCompletionSource.Task;
             }
             finally
             {
-                Task.Factory.StartNew(async () =>
+                if (Volatile.Read(ref this.syncCount) == 0)
                 {
-                    var counter = Interlocked.Increment(ref this.syncCount);
-                    var file = new FileInfo(filePath);
-                    this.logger.WriteLine($"Synchronizing {file.Name}");
-                    try
+                    Task.Factory.StartNew(async () =>
                     {
-                        var directory = file.Directory?.FullName ?? "./";
-                        var outputName = await subtitleProvider.GetAsync(file.Name, directory);
-                        var extension = Path.GetExtension(outputName);
-                        if (IsCompressed(extension))
+                        var counter = Interlocked.Increment(ref this.syncCount);
+                        var file = new FileInfo(filePath);
+                        this.logger.WriteLine($"Synchronizing {file.Name}");
+                        try
                         {
-                            outputName = await DecompressAsync(outputName);
+                            var directory = file.Directory?.FullName ?? "./";
+                            var outputName = await subtitleProvider.GetAsync(file.Name, directory);
+                            var extension = Path.GetExtension(outputName);
+                            if (IsCompressed(extension))
+                            {
+                                outputName = await DecompressAsync(outputName);
+                            }
+
+                            var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(file.Name));
+                            this.logger.WriteLine($"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
+                        }
+                        catch (Exception exc)
+                        {
+                            this.logger.Error($"Synchronization of {file.Name} failed with: ${exc.Message}");
+
+                            if (counter <= RetryLimit)
+                            {
+                                this.workerQueue.Enqueue(this);
+                            }
                         }
 
-                        var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(file.Name));
-                        this.logger.WriteLine($"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
-                    }
-                    catch (Exception exc)
-                    {
-                        this.logger.Error($"Synchronization of {file.Name} failed with: ${exc.Message}");
-
-                        if (counter <= RetryLimit)
-                        {
-                            this.workerQueue.Enqueue(this);
-                        }
-                    }
-
-                    this.taskCompletionSource.SetResult(true);
-                }, TaskCreationOptions.LongRunning);
+                        Interlocked.Decrement(ref this.syncCount);
+                        this.taskCompletionSource.SetResult(true);
+                    }, TaskCreationOptions.LongRunning);
+                }
             }
         }
 

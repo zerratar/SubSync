@@ -4,20 +4,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 
-namespace SubSync.Processors
+namespace SubSync
 {
     internal class WorkerQueue : IWorkerQueue
     {
+        public event EventHandler<QueueCompletedEventArgs> QueueCompleted;
         private const int ConcurrentWorkers = 7;
         private readonly IWorkerProvider workerProvider;
         private readonly ConcurrentQueue<IWorker> queue = new ConcurrentQueue<IWorker>();
         private readonly Thread workerThread;
         private bool enabled;
         private bool disposed;
-
-        private int currentJobCount = 0;
+        private int queueSize = 0;
 
         public WorkerQueue(IWorkerProvider workerProvider)
         {
@@ -39,6 +38,7 @@ namespace SubSync.Processors
 
         public void Enqueue(IWorker worker)
         {
+            Interlocked.Increment(ref queueSize);
             queue.Enqueue(worker);
         }
 
@@ -59,6 +59,9 @@ namespace SubSync.Processors
         private async void ProcessQueue()
         {
             var activeJobs = new List<Task>();
+            var resultReported = false;
+            var failed = 0;
+            var succeeded = 0;
             do
             {
                 while (activeJobs.Count < ConcurrentWorkers && this.queue.TryDequeue(out var worker))
@@ -68,12 +71,23 @@ namespace SubSync.Processors
 
                 if (activeJobs.Count > 0)
                 {
+                    resultReported = false;
                     await Task.WhenAny(activeJobs);
-
+                    failed += activeJobs.Count(x => x.IsFaulted && x.IsCompleted);
+                    succeeded += activeJobs.Count(x => !x.IsFaulted && x.IsCompleted);
                     activeJobs = activeJobs.Where(x => !x.IsCompleted).ToList();
                 }
                 else
                 {
+                    if (!resultReported && QueueCompleted != null)
+                    {
+                        QueueCompleted?.Invoke(this, new QueueCompletedEventArgs(Volatile.Read(ref queueSize), succeeded, failed));
+                        resultReported = true;
+                    }
+
+                    succeeded = 0;
+                    failed = 0;
+                    Volatile.Write(ref queueSize, 0);
                     System.Threading.Thread.Sleep(100);
                 }
 

@@ -1,6 +1,4 @@
-﻿using SubSync.Processors;
-
-namespace SubSync
+﻿namespace SubSync
 {
     internal interface IWorkerProvider
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SubSync.Processors
+namespace SubSync
 {
     internal interface IFileSystemWatcher : IDisposable
     {
