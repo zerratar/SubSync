@@ -60,3 +60,12 @@ Press 'q' at any time to exit SubSync
 Press 'a' to try and re-sync any previously unsyced subtitles. Yes the subtitle downloads can randomly fail some times when subscene.com decides you shouldnt be downloading their subtitles too often.
 
 Oh, and be sure to bring popcorns or your favorite snacks when watching your movies!
+
+## Changes
+### v0.1.1 - 2018-04-08
+Update the usage of all FileInfo and Directoryinfo instances to use the ZetaLongPaths available from here https://github.com/UweKeim/ZetaLongPaths to *crosses my fingers* fix the bug caused by too long paths.
+
+I never tested it properly, but I also ensured to catch any of those exceptions thrown as well.
+
+### v0.1.0 - 2018-04-08
+Initial release on github, you know the magical first version

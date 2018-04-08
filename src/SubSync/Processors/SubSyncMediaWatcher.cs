@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using SubSync.Extensions;
+using FileInfo = ZetaLongPaths.ZlpFileInfo;
+using DirectoryInfo = ZetaLongPaths.ZlpDirectoryInfo;
 
 namespace SubSync.Processors
 {
@@ -73,12 +75,19 @@ namespace SubSync.Processors
 
         private void Sync(string fullFilePath)
         {
-            if (IsSynchronized(fullFilePath))
+            try
             {
-                return;
-            }
+                if (IsSynchronized(fullFilePath))
+                {
+                    return;
+                }
 
-            this.workerQueue.Enqueue(fullFilePath);
+                this.workerQueue.Enqueue(fullFilePath);
+            }
+            catch (Exception exc)
+            {
+                this.logger.Error($"Unable to sync subtitles for @yellow@{fullFilePath} @red@, reason: {exc.Message}.");
+            }
         }
 
         private void FsWatcherOnError(object sender, ErrorEventArgs errorEventArgs)

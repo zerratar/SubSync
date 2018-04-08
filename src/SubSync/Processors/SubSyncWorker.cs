@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SharpCompress.Archives;
 using SubSync.Proivders;
+using FileInfo = ZetaLongPaths.ZlpFileInfo;
+using DirectoryInfo = ZetaLongPaths.ZlpDirectoryInfo;
 
 namespace SubSync.Processors
 {
