@@ -11,7 +11,7 @@ SubSync will also prefer a chosen language over the other, so for me I prefer Sw
 
 **Note:**
 This tool was created with just a couple of hours so be aware that it may not always work perfectly.
-I do appraciate any problems you may stumble upon either code-wise or functionality when/or if testing this application out. Don't be afraid to add an issue!
+I do appreciate any problems you may stumble upon either code-wise or functionality when/or if testing this application out. Don't be afraid to add an issue!
 
 ## Binaries
 You can download the somewhat latest binaries from the release tab thingy
