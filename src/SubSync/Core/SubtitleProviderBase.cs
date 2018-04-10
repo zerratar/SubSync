@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,15 +11,17 @@ namespace SubSync
     internal abstract class SubtitleProviderBase : ISubtitleProvider
     {
         protected readonly HashSet<string> Languages;
-        
+
         protected SubtitleProviderBase(HashSet<string> languages)
         {
             this.Languages = languages;
         }
 
-        protected abstract int RequestRetryLimit { get; }
+        protected string UserAgent { get; set; } = "SubSync10";
 
-        protected abstract int RequestTimeout { get; }
+        protected int RequestRetryLimit { get; set; } = 3;
+
+        protected int RequestTimeout { get; set; } = 3000;
 
         public abstract Task<string> GetAsync(string name, string outputDirectory);
 
@@ -27,8 +30,7 @@ namespace SubSync
             try
             {
                 var filename = "download.zip";
-                var req = HttpWebRequest.CreateHttp(url);
-                req.Timeout = req.ReadWriteTimeout = RequestTimeout;
+                var req = CreateRequest(url);
                 using (var response = (HttpWebResponse)await req.GetResponseAsync())
                 {
                     var contentDisposition = response.Headers.Get("Content-Disposition");
@@ -79,14 +81,7 @@ namespace SubSync
         {
             try
             {
-                var req = HttpWebRequest.CreateHttp(url);
-                req.Timeout = req.ReadWriteTimeout = RequestTimeout;
-                using (var response = await req.GetResponseAsync())
-                using (var stream = response.GetResponseStream())
-                using (var sr = new StreamReader(stream))
-                {
-                    return await sr.ReadToEndAsync();
-                }
+                return await GetResponseStringAsync(CreateRequest(url));
             }
             catch (WebException webException)
             {
@@ -103,6 +98,81 @@ namespace SubSync
                 await Task.Delay(1000 * (retryCount + 1));
                 return await DownloadStringAsync(url, ++retryCount);
             }
+        }
+
+        protected async Task<string> GetResponseStringAsync(HttpWebRequest request)
+        {
+            using (var response = await request.GetResponseAsync())
+            {
+                return await GetResponseStringAsync(response);
+            }
+        }
+
+        protected async Task<string> GetResponseStringAsync(WebResponse response)
+        {
+            using (var stream = response.GetResponseStream())
+            using (var sr = new StreamReader(stream))
+            {
+                return await sr.ReadToEndAsync();
+            }
+        }
+
+        protected HttpWebRequest CreatePostAsync(string url, string data)
+        {
+            if (data == null)
+            {
+                throw new ArgumentNullException(nameof(data));
+            }
+
+            if (data.StartsWith("<"))
+            {
+                return CreatePostXmlAsync(url, data);
+            }
+
+            if (data.StartsWith("[") || data.StartsWith("{"))
+            {
+                return CreatePostJsonAsync(url, data);
+            }
+
+            return CreatePostTextAsync(url, data);
+        }
+
+        protected HttpWebRequest CreatePostXmlAsync(string url, string data)
+        {
+            return CreatePostRequest(url, data, "text/xml");
+        }
+
+        protected HttpWebRequest CreatePostJsonAsync(string url, string data)
+        {
+            return CreatePostRequest(url, data, "application/json");
+        }
+
+        protected HttpWebRequest CreatePostTextAsync(string url, string data)
+        {
+            return CreatePostRequest(url, data, "text/plain");
+        }
+
+        protected HttpWebRequest CreatePostRequest(string url, string data, string contentType)
+        {
+            var req = CreateRequest(url, "POST");
+            req.ContentType = contentType;
+            req.Host = url.Split(new[] { "://" }, StringSplitOptions.None)[1].Split('/').FirstOrDefault();
+            using (var reqStream = req.GetRequestStream())
+            using (var writer = new StreamWriter(reqStream))
+            {
+                writer.Write(data);
+            }
+
+            return req;
+        }
+
+        private HttpWebRequest CreateRequest(string url, string method = "GET")
+        {
+            var req = HttpWebRequest.CreateHttp(url);
+            req.Method = method;
+            req.UserAgent = UserAgent;
+            req.Timeout = req.ReadWriteTimeout = RequestTimeout;
+            return req;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

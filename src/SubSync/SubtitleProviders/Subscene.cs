@@ -14,10 +14,6 @@ namespace SubSync
         {
         }
 
-        protected override int RequestRetryLimit { get; } = 3;
-
-        protected override int RequestTimeout { get; } = 3000;
-
         public override async Task<string> GetAsync(string name, string outputDirectory)
         {
             var url = await FindAsync(name);

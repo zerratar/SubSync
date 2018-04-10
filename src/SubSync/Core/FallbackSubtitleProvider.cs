@@ -4,11 +4,12 @@ using System.Threading.Tasks;
 
 namespace SubSync
 {
-    internal class FallbackSubtitleProvider : ISubtitleProvider
+    internal class FallbackSubtitleProvider : ISubtitleProvider, IDisposable
     {
         private readonly ConcurrentDictionary<string, int> providerCache = new ConcurrentDictionary<string, int>();
         private readonly ISubtitleProvider[] _providers;
         private readonly int MaxRetryCount = 3;
+        private bool disposed;
 
         public FallbackSubtitleProvider(params ISubtitleProvider[] providers)
         {
@@ -35,6 +36,30 @@ namespace SubSync
                 }
 
                 return await this.GetAsync(name, outputDirectory);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.disposed = true;
+            foreach (var provider in this._providers)
+            {
+                try
+                {
+                    if (provider is IDisposable disposable)
+                    {
+                        disposable.Dispose();
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
             }
         }
     }
