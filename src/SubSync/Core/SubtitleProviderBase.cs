@@ -172,6 +172,8 @@ namespace SubSync
             req.Method = method;
             req.UserAgent = UserAgent;
             req.Timeout = req.ReadWriteTimeout = RequestTimeout;
+            req.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip;
+            req.Headers.Add(HttpRequestHeader.AcceptEncoding, "gzip, deflate");
             return req;
         }
 

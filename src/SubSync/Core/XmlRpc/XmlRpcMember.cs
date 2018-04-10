@@ -1,11 +1,13 @@
-﻿namespace SubSync
+﻿using System;
+
+namespace SubSync
 {
-    public class XmlRpcMember : XmlRpcObject
+    public class XmlRpcMember : XmlRpcObjectBase
     {
         public XmlRpcString Name { get; }
-        public XmlRpcObject Value { get; }
+        public XmlRpcObjectBase Value { get; }
 
-        public XmlRpcMember(XmlRpcString name, XmlRpcObject value)
+        public XmlRpcMember(XmlRpcString name, XmlRpcObjectBase value)
         {
             Name = name;
             Value = value;
@@ -16,9 +18,9 @@
             return "'" + Name + "' => '" + Value + "'";
         }
 
-        public override XmlRpcObject FindRecursive(string name)
+        public override XmlRpcObjectBase FindRecursive(string name)
         {
-            if (name == this.Name.ToString())
+            if (name.Equals(this.Name.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 return this;
             }

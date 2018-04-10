@@ -2,7 +2,7 @@
 
 namespace SubSync
 {
-    public class XmlRpcStruct : XmlRpcObject
+    public class XmlRpcStruct : XmlRpcObjectBase
     {
         public List<XmlRpcMember> Members { get; }
 
@@ -11,7 +11,7 @@ namespace SubSync
             Members = members;
         }
 
-        public override XmlRpcObject FindRecursive(string name)
+        public override XmlRpcObjectBase FindRecursive(string name)
         {
             foreach (var item in Members)
             {

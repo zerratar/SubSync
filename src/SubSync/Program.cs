@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-
+[assembly: InternalsVisibleTo("SubSync.Tests")]
 namespace SubSync
 {
     class Program
     {
         static void Main(string[] args)
         {
-            //var input = "./";
-            var input = "E:\\filmer";
+            var input = "./";            
             var videoExtensions = ParseList("*.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm");
             var subtitleExtensions = ParseList("*.srt;*.txt;*.sub;*.idx;*.ssa;*.ass");
             var languages = ParseList("english");

@@ -1,140 +1,132 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Xml.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 
 namespace SubSync
 {
-    public abstract class XmlRpcObject
+    public class XmlRpcObject : XmlRpcObjectBase
     {
-        protected XmlRpcObject()
+        internal readonly List<XmlRpcObjectBase> children = new List<XmlRpcObjectBase>();
+
+        internal void Add(XmlRpcObjectBase child)
         {
+            children.Add(child);
         }
 
-        public static XmlRpcRoot Parse(string data)
+        public T GetValue<T>(string name)
         {
-            var doc = XDocument.Parse(data);
-            if (doc.Root == null)
+            if (this.children.Count > 0 && !string.IsNullOrEmpty(name))
             {
-                throw new ArgumentException("Argument is not a valid xml document.", nameof(data));
-            }
-
-            if (doc.Root.Name == "methodResponse")
-            {
-                return ParseMethodResponse(doc.Root);
-            }
-
-            return new XmlRpcRoot();
-        }
-
-        private static XmlRpcRoot ParseMethodResponse(XElement doc)
-        {
-            var values = doc.Element("params");
-            if (values == null)
-            {
-                throw new Exception("Xmlrpc response is invalid, missing params element.");
-            }
-
-            var resultObject = new XmlRpcRoot();
-            var parameters = values.Elements("param");
-            foreach (var param in parameters)
-            {
-                var result = ParseParam(param);
-                resultObject.Add(result);
-            }
-
-            return resultObject;
-        }
-
-
-        public abstract XmlRpcObject FindRecursive(string name);
-
-        private static XmlRpcObject ParseParam(XElement param)
-        {
-            return ParseValue(param.Element("value"));
-        }
-
-        private static XmlRpcObject ParseValue(XElement value)
-        {
-            foreach (var elm in value.Elements())
-            {
-                if (elm.Name == "struct")
+                foreach (var child in children)
                 {
-                    return ParseStruct(elm);
-                }
-                if (elm.Name == "array")
-                {
-                    return ParseArray(elm);
-                }
-                if (elm.Name == "string")
-                {
-                    return ParseString(elm);
-                }
-                if (elm.Name == "double")
-                {
-                    return ParseDouble(elm);
-                }
-                if (elm.Name == "int")
-                {
-                    return ParseInt(elm);
+                    var node = child.FindRecursive(name);
+                    if (node is XmlRpcMember member)
+                    {
+                        node = member.Value;
+                    }
+                    if (node is IXmlRpcObjectValue valueNode)
+                    {
+                        return (T)valueNode.GetValue();
+                    }
                 }
             }
-
-            return ParseString(value);
-        }
-
-        private static XmlRpcInt ParseInt(XElement elm)
-        {
-            int.TryParse(elm.Value, out var value);
-            return new XmlRpcInt(value);
-        }
-
-        private static XmlRpcDouble ParseDouble(XElement elm)
-        {
-            double.TryParse(elm.Value, out var value);
-            return new XmlRpcDouble(value);
-        }
-
-        private static XmlRpcObject ParseString(XElement elm)
-        {
-            return new XmlRpcString(elm.Value);
-        }
-
-        private static XmlRpcArray ParseArray(XElement elm)
-        {
-            var items = new List<XmlRpcObject>();
-            var dataElement = elm.Element("data");
-            var elements = dataElement.Elements("value");
-            foreach (var elmData in elements)
-            {
-                var item = ParseValue(elmData);
-                items.Add(item);
-            }
-
-            return new XmlRpcArray(items.ToArray());
-        }
-
-        private static XmlRpcObject ParseStruct(XElement elm)
-        {
-            var foundMembers = new List<XmlRpcMember>();
-            var members = elm.Elements("member");
-            foreach (var member in members)
-            {
-                var name = ParseValue(member.Element("name")) as XmlRpcString;
-                var value = ParseValue(member.Element("value"));
-                foundMembers.Add(new XmlRpcMember(name, value));
-            }
-            return new XmlRpcStruct(foundMembers);
-        }
-
-        public T Deserialize<T>(string data)
-        {
-            // aint gonna write a xml parser today
-            // 1. parse as xml or xdoc
-            // 2. get properties of type T
-            // 3. create instance of T
-            // 4. assign all properties with values matching same name parsed from data.
-            // 
             return default(T);
+        }
+
+        public override XmlRpcObjectBase FindRecursive(string name)
+        {
+            foreach (var child in children)
+            {
+                var found = child.FindRecursive(name);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
+        }
+
+        public T Deserialize<T>()
+        {
+            var dataRoot = "data";
+            var type = typeof(T);
+            if (type.IsArray)
+            {
+                var elementType = type.GetElementType();
+                return DeserializeArray<T>(dataRoot, elementType, elementType.GetProperties());
+            }
+
+            if (type.IsGenericType)
+            {
+                var genericTypeDefinition = type.GetGenericTypeDefinition();
+                return DeserializeGeneric<T>(dataRoot, genericTypeDefinition, genericTypeDefinition.GetProperties());
+            }
+
+            return Deserialize<T>(dataRoot, type.GetProperties(BindingFlags.Public));
+        }
+
+
+        private T Deserialize<T>(string dataRoot, PropertyInfo[] properties)
+        {
+            throw new NotImplementedException();
+            return default(T);
+        }
+
+        private T DeserializeGeneric<T>(string dataRoot, Type genericType, PropertyInfo[] properties)
+        {
+            throw new NotImplementedException();
+            return default(T);
+        }
+
+        private T DeserializeArray<T>(string dataRoot, Type elementType, PropertyInfo[] properties)
+        {
+            dynamic list = Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType));
+            if (FindRecursive(dataRoot) is XmlRpcMember member)
+            {
+                if (member.Value is XmlRpcArray array)
+                {
+                    foreach (var item in array.Items)
+                    {
+                        dynamic value = Deserialize(elementType, item, properties);
+                        list.Add(value);
+                    }
+                }
+            }
+
+            return list.ToArray();
+        }
+
+        private object Deserialize(Type targetType, XmlRpcObjectBase item, PropertyInfo[] properties)
+        {
+            if (item is XmlRpcStruct strct)
+            {
+                return DeserializeStruct(targetType, strct, properties);
+            }
+
+            // todo: implement any other types that may be supported like serialize as strings, integers, doubles, etc
+            throw new NotImplementedException();
+
+            return default(object);
+        }
+
+        private object DeserializeStruct(Type structType, XmlRpcStruct structData, PropertyInfo[] properties)
+        {
+            var instance = Activator.CreateInstance(structType);
+            foreach (var prop in properties)
+            {
+                if (structData.FindRecursive(prop.Name) is XmlRpcMember member)
+                {
+                    if (member.Value is IXmlRpcObjectValue val)
+                    {
+                        dynamic v = val.GetValue();
+                        prop.SetValue(instance, v);
+                    }
+                }
+            }
+            return instance;
         }
     }
 }

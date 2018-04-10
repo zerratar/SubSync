@@ -1,15 +1,15 @@
 ﻿namespace SubSync
 {
-    public class XmlRpcArray : XmlRpcObject
+    public class XmlRpcArray : XmlRpcObjectBase
     {
-        public XmlRpcObject[] Items { get; }
+        public XmlRpcObjectBase[] Items { get; }
 
-        public XmlRpcArray(XmlRpcObject[] items)
+        public XmlRpcArray(XmlRpcObjectBase[] items)
         {
             Items = items;
         }
 
-        public override XmlRpcObject FindRecursive(string name)
+        public override XmlRpcObjectBase FindRecursive(string name)
         {
             foreach (var item in Items)
             {

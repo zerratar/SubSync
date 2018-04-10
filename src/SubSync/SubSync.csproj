@@ -5,6 +5,20 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <Version>0.1.4</Version>
     <AssemblyVersion>0.1.4.0</AssemblyVersion>
+	    <RuntimeIdentifiers>
+      win10-x64;
+	  win10-x86;
+	  linux-x64;
+      centos-x64;
+      centos.7-x64;
+      rhel-x64;
+      rhel.6-x64;
+      rhel.7-x64;
+      rhel.7.1-x64;
+      rhel.7.2-x64;
+      rhel.7.3-x64;
+      rhel.7.4-x64
+    </RuntimeIdentifiers>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

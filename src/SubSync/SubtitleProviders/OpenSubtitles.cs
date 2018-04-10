@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -8,33 +9,31 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using SharpCompress.Compressors;
+using SharpCompress.Compressors.Deflate;
+using SubSync.Extensions;
 
 namespace SubSync
 {
+    /// <summary>    
+    //  Implementation of the https://www.opensubtitles.org XML-RPC Api
+    /// </summary>
     internal class OpenSubtitles : SubtitleProviderBase, IDisposable
     {
         private const string VipApiUrl = "https://vip-api.opensubtitles.org/xml-rpc";
         private const string ApiUrl = "http://api.opensubtitles.org/xml-rpc";
-
-
-
         private const int MaxDownloadsPerDay = 200;
         private const int VipMaxDownloadsPerDay = 1000;
-
         private const int MaxRequestsEvery10Seconds = 40;
         private const int VipMaxRequestsEvery10Seconds = 40;
-
+        private readonly int keepAliveInterval = 60 * 14; // every 14 minutes, 15 according to api. but just to be safe.
+        private readonly AutoResetEvent loginMutex = new AutoResetEvent(true);
         private readonly IAuthCredentialProvider credentialProvider;
         private readonly HashSet<SubtitleLanguage> supportedLanguages;
         private readonly Thread keepAliveThread;
 
-        private AutoResetEvent loginMutex = new AutoResetEvent(true);
-
         private DateTime startTime;
         private DateTime requestBlockTimeLimit;
-
-        private int keepAliveInterval = 60 * 14; // every 14 minutes, 15 according to api. but just to be safe.
-
         private int totalRequests;
         private int totalRequestsToday;
         private int totalRequestsInTimeBlock;
@@ -46,8 +45,6 @@ namespace SubSync
 
         private bool disposed;
 
-
-        // https://www.opensubtitles.org
         public OpenSubtitles(HashSet<string> languages, IAuthCredentialProvider credentialProvider) : base(languages)
         {
             this.credentialProvider = credentialProvider;
@@ -65,16 +62,6 @@ namespace SubSync
             //  We will have to keep track on requests and downloads for this provider to not exceed the limit and first rely on other providers such as subscene            
             keepAliveThread = new Thread(KeepAliveProcess);
             keepAliveThread.Start();
-        }
-
-        private HashSet<SubtitleLanguage> GetSupportedLanguages(HashSet<string> languages)
-        {
-            var result = new HashSet<SubtitleLanguage>();
-            foreach (var language in languages)
-            {
-                result.Add(SubtitleLanguage.Find(language));
-            }
-            return result;
         }
 
         public void Dispose()
@@ -111,7 +98,7 @@ namespace SubSync
                 throw new SubtitleNotFoundException();
             }
 
-            return await DownloadSubtitleAsync(name, bestMatchingResult);
+            return await DownloadSubtitleAsync(bestMatchingResult, outputDirectory);
         }
 
         // see http://trac.opensubtitles.org/projects/opensubtitles/wiki/XmlRpcSearchSubtitles
@@ -119,7 +106,10 @@ namespace SubSync
         {
             var languageList = string.Join(",", supportedLanguages.Select(x => x.LanguageId).ToArray());
 
-            // preferred one
+            // TODO: its preferred to do a search with hash rather than filename
+            //       for later, we could try use search with hash first and then do a query search
+            //       if no results were given in the first search.
+
             // var movieHash = CalculateVideoHash(name);
             // var movieByteSize = GetVideoByteSize(name);
 
@@ -175,7 +165,7 @@ namespace SubSync
                     Arg("query", query),
                     Arg("sublanguageid", languageList),
                     Arg("seriesepisode", episodeNumber),
-                    Arg("serieseason", seasonNumber));
+                    Arg("Seriesseason", seasonNumber));
             }
             else
             {
@@ -184,18 +174,29 @@ namespace SubSync
                     Arg("sublanguageid", languageList));
             }
 
-            return requestResult.Deserialize<Subtitle[]>("data");
+            return requestResult.Deserialize<Subtitle[]>();
         }
 
-        private Task<string> DownloadSubtitleAsync(string name, Subtitle target)
+        private async Task<string> DownloadSubtitleAsync(Subtitle target, string outputDirectory)
         {
-            return null;
+            var quota = Interlocked.Decrement(ref downloadQuota); // is really only counted if the request was successeful. but to be on the safe side.
+            if (quota <= 0)
+            {
+                throw new DownloadQuotaReachedException();
+            }
+
+            var result = await ApiRequest("DownloadSubtitles", Arg(target.IdSubtitleFile));
+            var subtitles = result.Deserialize<SubtitleData[]>();
+            var subtitle = subtitles.First();
+            var subtitleData = Utilities.DecompressGzipBase64(subtitle.Data);
+            var outputFileName = Path.Combine(outputDirectory, target.SubFileName);
+            File.WriteAllText(outputFileName, subtitleData, Encoding.UTF8);
+            return outputFileName;
         }
 
-        private Subtitle FindBestSearchResultMatch(string name, Subtitle[] searchResults)
+        private static Subtitle FindBestSearchResultMatch(string name, Subtitle[] searchResults)
         {
-            // TODO(Zerratar): implement an appropriate matching algorithm
-            return searchResults.FirstOrDefault(); // super dumb just now.
+            return FilenameDiff.FindBestMatch<Subtitle>(name, searchResults, x => x.MovieReleaseName);
         }
 
         private async Task LoginIfRequiredAsync()
@@ -219,9 +220,9 @@ namespace SubSync
                 {
                     loginMutex.Set();
                 }
-            }
 
-            throw new UnauthorizedAccessException("Login to opensubtitle.org failed!");
+                throw new UnauthorizedAccessException("Login to opensubtitle.org failed!");
+            }
         }
 
         private Task LogoutAsync()
@@ -242,7 +243,7 @@ namespace SubSync
             return true;
         }
 
-        private Task<XmlRpcRoot> LoginAsync(AuthCredentials credentials)
+        private Task<XmlRpcObject> LoginAsync(AuthCredentials credentials)
         {
             this.authenticationToken = null;
             this.isAuthenticated = false;
@@ -250,7 +251,7 @@ namespace SubSync
             return ApiRequest("LogIn", Arg(credentials.Username), Arg(credentials.Password), Arg("en"), Arg(UserAgent));
         }
 
-        private async Task<XmlRpcRoot> ApiRequest(string method, params KeyValuePair<string, object>[] arguments)
+        private async Task<XmlRpcObject> ApiRequest(string method, params KeyValuePair<string, object>[] arguments)
         {
             Interlocked.Increment(ref totalRequests);
             Interlocked.Increment(ref totalRequestsToday);
@@ -287,7 +288,7 @@ namespace SubSync
                         }
                     }
 
-                    return XmlRpcObject.Parse(await GetResponseStringAsync(response));
+                    return XmlRpcObjectBase.Parse(await GetResponseStringAsync(response));
                 }
             }
             catch (Exception exc)
@@ -313,6 +314,16 @@ namespace SubSync
                 }
                 Thread.Sleep(250);
             }
+        }
+
+        private HashSet<SubtitleLanguage> GetSupportedLanguages(HashSet<string> languages)
+        {
+            var result = new HashSet<SubtitleLanguage>();
+            foreach (var language in languages)
+            {
+                result.Add(SubtitleLanguage.Find(language));
+            }
+            return result;
         }
 
         private void AssertWithinRequestLimits()
@@ -352,22 +363,37 @@ namespace SubSync
 
         private string BuildRequestData(string method, params KeyValuePair<string, object>[] arguments)
         {
+            // quick and dirty xml-rpc methodcall serialization
+            // may do this correctly in the future. but meh
             var sb = new StringBuilder();
             sb.Append($"<methodCall><methodName>{method}</methodName><params>");
-
             var tokenRequest = this.isAuthenticated && !string.IsNullOrEmpty(authenticationToken);
             if (tokenRequest)
             {
                 sb.Append($"<param><value><string>{authenticationToken}</string></value></param>");
                 if (arguments.Length > 0)
                 {
-                    sb.Append($"<param><value><array><data><value><struct>");
-                    foreach (var item in arguments)
+                    var isStructBody = arguments.Any(x => !string.IsNullOrEmpty(x.Key));
+                    sb.Append($"<param><value><array><data>");
+                    if (isStructBody)
                     {
-                        var argumentType = GetArgumentTypeName(item.Value);
-                        sb.Append($"<member><name>{item.Key}</name><value><{argumentType}>{item.Value}</{argumentType}></value></member>");
+                        sb.Append("<value><struct>");
+                        foreach (var item in arguments)
+                        {
+                            var argumentType = GetArgumentTypeName(item.Value);
+                            sb.Append($"<member><name>{item.Key}</name><value><{argumentType}>{item.Value}</{argumentType}></value></member>");
+                        }
+                        sb.Append($"</struct></value>");
                     }
-                    sb.Append($"</struct></value></data></array></value></param>");
+                    else
+                    {
+                        foreach (var item in arguments)
+                        {
+                            var argumentType = GetArgumentTypeName(item.Value);
+                            sb.Append($"<value><{argumentType}>{item.Value}</{argumentType}></value>");
+                        }
+                    }
+                    sb.Append($"</data></array></value></param>");
                 }
             }
             else
@@ -402,55 +428,9 @@ namespace SubSync
             return "string";
         }
 
-        private static byte[] ComputeMovieHash(string filename)
+        public class Subtitle
         {
-            byte[] result;
-            using (Stream input = File.OpenRead(filename))
-            {
-                result = ComputeMovieHash(input);
-            }
-            return result;
-        }
-
-        private static byte[] ComputeMovieHash(Stream input)
-        {
-            long lhash, streamsize;
-            streamsize = input.Length;
-            lhash = streamsize;
-
-            long i = 0;
-            byte[] buffer = new byte[sizeof(long)];
-            while (i < 65536 / sizeof(long) && (input.Read(buffer, 0, sizeof(long)) > 0))
-            {
-                i++;
-                lhash += BitConverter.ToInt64(buffer, 0);
-            }
-
-            input.Position = Math.Max(0, streamsize - 65536);
-            i = 0;
-            while (i < 65536 / sizeof(long) && (input.Read(buffer, 0, sizeof(long)) > 0))
-            {
-                i++;
-                lhash += BitConverter.ToInt64(buffer, 0);
-            }
-            input.Close();
-            byte[] result = BitConverter.GetBytes(lhash);
-            Array.Reverse(result);
-            return result;
-        }
-
-        private static string ToHexadecimal(byte[] bytes)
-        {
-            StringBuilder hexBuilder = new StringBuilder();
-            for (int i = 0; i < bytes.Length; i++)
-            {
-                hexBuilder.Append(bytes[i].ToString("x2"));
-            }
-            return hexBuilder.ToString();
-        }
-
-        internal class Subtitle
-        {
+            public Subtitle() { } // required for deserialization
             public string IdSubtitleFile { get; set; }
             public string SubFileName { get; set; }
             public string SubLanguageId { get; set; }
@@ -461,7 +441,14 @@ namespace SubSync
             public string SubDownloadLink { get; set; }
             public string ZipDownloadLink { get; set; }
             public string SubtitleLink { get; set; }
-            public double SubRating { get; set; }
+            public string SubRating { get; set; }
+        }
+
+        public class SubtitleData
+        {
+            public SubtitleData() { }
+            public string IdSubtitleFile { get; set; }
+            public string Data { get; set; }
         }
     }
 }

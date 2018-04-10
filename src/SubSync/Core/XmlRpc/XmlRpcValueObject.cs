@@ -1,8 +1,8 @@
 ﻿namespace SubSync
 {
-    public abstract class XmlRpcValueObject : XmlRpcObject, IXmlRpcObjectValue
+    public abstract class XmlRpcValueObject : XmlRpcObjectBase, IXmlRpcObjectValue
     {
-        public override XmlRpcObject FindRecursive(string name)
+        public override XmlRpcObjectBase FindRecursive(string name)
         {
             return null;
         }
