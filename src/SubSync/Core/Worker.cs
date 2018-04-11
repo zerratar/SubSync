@@ -11,44 +11,47 @@ namespace SubSync
 {
     internal class Worker : IWorker
     {
-        private const int RetryLimit = 5;
         private readonly string filePath;
         private readonly ILogger logger;
         private readonly IWorkerQueue workerQueue;
         private readonly ISubtitleProvider subtitleProvider;
+        private readonly IStatusReporter<WorkerStatus> statusReporter;
         private readonly HashSet<string> subtitleExtensions;
+        private readonly int retryCount;
+
         private static readonly HashSet<string> FileCompressionExtensions = new HashSet<string>
         {
             ".zip", ".rar", ".gzip", ".gz", ".7z", ".tar", ".tar.gz"
         };
 
-        private TaskCompletionSource<object> taskCompletionSource;
-
-        private int syncCount;
+        private TaskCompletionSource<object> taskCompletionSource = null;
 
         public Worker(
             string filePath,
             ILogger logger,
             IWorkerQueue workerQueue,
             ISubtitleProvider subtitleProvider,
-            HashSet<string> subtitleExtensions)
+            IStatusReporter<WorkerStatus> statusReporter,
+            HashSet<string> subtitleExtensions,
+            int retryCount = 0)
         {
             this.filePath = filePath;
             this.logger = logger;
             this.workerQueue = workerQueue;
             this.subtitleProvider = subtitleProvider;
+            this.statusReporter = statusReporter;
             this.subtitleExtensions = subtitleExtensions;
+            this.retryCount = retryCount;
         }
 
         public Task SyncAsync()
         {
-            if (taskCompletionSource == null
-                || taskCompletionSource.Task.Status == TaskStatus.RanToCompletion
-                || taskCompletionSource.Task.Status == TaskStatus.Canceled
-                || taskCompletionSource.Task.Status == TaskStatus.Faulted)
+            if (taskCompletionSource != null)
             {
-                taskCompletionSource = new TaskCompletionSource<object>();
+                return taskCompletionSource.Task;
             }
+
+            taskCompletionSource = new TaskCompletionSource<object>();
 
             try
             {
@@ -56,47 +59,49 @@ namespace SubSync
             }
             finally
             {
-                if (Volatile.Read(ref this.syncCount) == 0)
+                Task.Factory.StartNew(async () =>
                 {
-                    Task.Factory.StartNew(async () =>
+                    if (this.retryCount > 0)
                     {
-                        var counter = Interlocked.Increment(ref this.syncCount);
-                        var file = new FileInfo(filePath);
-                        this.logger.WriteLine($"Synchronizing {file.Name}");
-                        try
-                        {
-                            var directory = file.Directory?.FullName ?? "./";
-                            var outputName = await subtitleProvider.GetAsync(file.Name, directory);
-                            var extension = Path.GetExtension(outputName);
-                            if (IsCompressed(extension))
-                            {
-                                outputName = await DecompressAsync(outputName);
-                            }
+                        await Task.Delay(this.retryCount * 1000);
+                    }
 
-                            var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(file.Name));
-                            this.logger.WriteLine(
-                                $"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
-                            Interlocked.Decrement(ref this.syncCount);
-                            this.taskCompletionSource.SetResult(true);
-                        }
-                        catch (NestedArchiveNotSupportedException nexc)
+                    var file = new FileInfo(filePath);
+                    this.logger.WriteLine($"Synchronizing {file.Name}");
+                    try
+                    {
+                        var directory = file.Directory?.FullName ?? "./";
+                        var outputName = await subtitleProvider.GetAsync(file.Name, directory);
+                        var extension = Path.GetExtension(outputName);
+                        if (IsCompressed(extension))
                         {
-                            this.logger.Error($"Synchronization of {file.Name} failed with: {nexc.Message}");
-                            this.taskCompletionSource.SetException(nexc);
-                        }
-                        catch (Exception exc)
-                        {
-                            this.logger.Error($"Synchronization of {file.Name} failed with: {exc.Message}");
-
-                            if (counter <= RetryLimit)
-                            {
-                                this.workerQueue.Enqueue(filePath); // (this);
-                            }
-                            this.taskCompletionSource.SetException(exc);
+                            outputName = await DecompressAsync(outputName);
                         }
 
-                    }, TaskCreationOptions.LongRunning);
-                }
+                        var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(file.Name));
+                        this.logger.WriteLine(
+                            $"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
+                        this.statusReporter.Report(new WorkerStatus(true, file.Name));
+                        this.taskCompletionSource.SetResult(true);
+                    }
+                    catch (NestedArchiveNotSupportedException nexc)
+                    {
+                        this.logger.Error($"Synchronization of {file.Name} failed with: {nexc.Message}");
+                        this.statusReporter.Report(new WorkerStatus(false, file.Name));
+                        this.taskCompletionSource.SetException(nexc);
+                    }
+                    catch (Exception exc)
+                    {
+                        this.logger.Error($"Synchronization of {file.Name} failed with: {exc.Message}");
+                        if (!this.workerQueue.Enqueue(filePath)) // (this);
+                        {
+                            this.statusReporter.Report(new WorkerStatus(false, file.Name));
+                        }
+                        this.taskCompletionSource.SetException(exc);
+                    }
+
+                }, TaskCreationOptions.LongRunning);
+
             }
         }
 
@@ -155,7 +160,7 @@ namespace SubSync
                     var archive = reader.Entries.FirstOrDefault(x => IsCompressed(System.IO.Path.GetExtension(x.Key)));
                     if (archive != null)
                     {
-                        logger.WriteLine($"@yel@Warning: Nested archive found inside '{filename}', output subtitle may not be correct!");                        
+                        logger.WriteLine($"@yel@Warning: Nested archive found inside '{filename}', output subtitle may not be correct!");
                         var result = await UnpackEntryAsync(archive, directory);
                         targetFile = result.Filename;
                         return await DecompressAsync(result.Filename);
@@ -240,14 +245,6 @@ namespace SubSync
                 this.Filename = filename;
                 this.Entry = entry;
             }
-        }
-    }
-
-    internal class NestedArchiveNotSupportedException : Exception
-    {
-        public NestedArchiveNotSupportedException(string filename)
-            : base($"Downloaded archive, '{filename}' @red@contain another archive within it and cannot properly be extracted. Archive kept for manual labor.")
-        {
         }
     }
 }

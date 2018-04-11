@@ -2,7 +2,7 @@
 
 namespace SubSync
 {
-    internal interface IFileSystemWatcher : IDisposable
+    internal interface IFileSystemWatcher
     {
         void Start();
         void Stop();
