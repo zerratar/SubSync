@@ -2,6 +2,6 @@
 {
     internal interface IWorkerProvider
     {
-        IWorker GetWorker(IWorkerQueue queue, string file);
+        IWorker GetWorker(IWorkerQueue queue, string file, int tryCount = 0);
     }
 }

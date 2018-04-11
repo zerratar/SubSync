@@ -9,18 +9,22 @@ namespace SubSync
 {
     internal class WorkerQueue : IWorkerQueue
     {
-        public event EventHandler<QueueCompletedEventArgs> QueueCompleted;
         private const int ConcurrentWorkers = 7;
         private readonly IWorkerProvider workerProvider;
+        private readonly IStatusReporter statusReporter;
         private readonly ConcurrentQueue<IWorker> queue = new ConcurrentQueue<IWorker>();
+        private readonly ConcurrentDictionary<string, int> queueTries = new ConcurrentDictionary<string, int>();
         private readonly Thread workerThread;
         private bool enabled;
         private bool disposed;
-        private int queueSize = 0;
 
-        public WorkerQueue(IWorkerProvider workerProvider)
+        // the max times the same item can be enqueued.
+        private const int RetryLimit = 3;
+
+        public WorkerQueue(IWorkerProvider workerProvider, IStatusReporter statusReporter)
         {
             this.workerProvider = workerProvider;
+            this.statusReporter = statusReporter;
             this.workerThread = new Thread(ProcessQueue);
         }
 
@@ -31,15 +35,17 @@ namespace SubSync
             this.disposed = true;
         }
 
-        public void Enqueue(string fullFilePath)
+        public bool Enqueue(string fullFilePath)
         {
-            this.Enqueue(this.workerProvider.GetWorker(this, fullFilePath));
-        }
+            queueTries.TryGetValue(fullFilePath, out var tries);
+            if (tries < RetryLimit)
+            {
+                queueTries[fullFilePath] = tries + 1;
+                queue.Enqueue(this.workerProvider.GetWorker(this, fullFilePath, tries));
+                return true;
+            }
 
-        public void Enqueue(IWorker worker)
-        {
-            Interlocked.Increment(ref queueSize);
-            queue.Enqueue(worker);
+            return false;
         }
 
         public void Start()
@@ -56,12 +62,15 @@ namespace SubSync
             workerThread.Join();
         }
 
+        public void Reset()
+        {
+            queue.Clear();
+            queueTries.Clear();
+        }
+
         private async void ProcessQueue()
         {
             var activeJobs = new List<Task>();
-            var resultReported = false;
-            var failed = 0;
-            var succeeded = 0;
             do
             {
                 while (activeJobs.Count < ConcurrentWorkers && this.queue.TryDequeue(out var worker))
@@ -71,24 +80,13 @@ namespace SubSync
 
                 if (activeJobs.Count > 0)
                 {
-                    resultReported = false;
                     await Task.WhenAny(activeJobs);
-                    failed += activeJobs.Count(x => x.IsFaulted && x.IsCompleted);
-                    succeeded += activeJobs.Count(x => !x.IsFaulted && x.IsCompleted);
                     activeJobs = activeJobs.Where(x => !x.IsCompleted).ToList();
                 }
                 else
                 {
-                    if (!resultReported && QueueCompleted != null)
-                    {
-                        QueueCompleted?.Invoke(this, new QueueCompletedEventArgs(Volatile.Read(ref queueSize), succeeded, failed));
-                        resultReported = true;
-                    }
-
-                    succeeded = 0;
-                    failed = 0;
-                    Volatile.Write(ref queueSize, 0);
-                    System.Threading.Thread.Sleep(100);
+                    statusReporter.FinishReport();// should only report if it has been set dirty. This happens only if someone has reported data.                                        
+                    Thread.Sleep(100);
                 }
 
             } while (this.enabled);

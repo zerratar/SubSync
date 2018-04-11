@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-
+[assembly: InternalsVisibleTo("SubSync.Tests")]
 namespace SubSync
 {
     class Program
     {
         static void Main(string[] args)
         {
-            var input = "./";
+            var input = "./";            
             var videoExtensions = ParseList("*.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm");
             var subtitleExtensions = ParseList("*.srt;*.txt;*.sub;*.idx;*.ssa;*.ass");
             var languages = ParseList("english");
@@ -33,44 +33,41 @@ namespace SubSync
             var version = GetVersion();
             var logger = new ConsoleLogger();
 
-            var fallbackSubtitleProvider = new FallbackSubtitleProvider(
-                    //new OpenSubtitles(languages), // uncomment as soon as its been implemented
-                    new Subscene(languages)
-                );
-
-            var subSyncWorkerProvider = new WorkerProvider(logger, subtitleExtensions, fallbackSubtitleProvider);
-            var subSyncWorkerQueue = new WorkerQueue(subSyncWorkerProvider);
-
-            using (var mediaWatcher = new SubtitleSynchronizer(logger, subSyncWorkerQueue, input, videoExtensions, subtitleExtensions))
+            using (var fallbackSubtitleProvider = new FallbackSubtitleProvider(
+                new OpenSubtitles(languages, new FileBasedCredentialsProvider("opensubtitle.auth", logger)),
+                new Subscene(languages)))
             {
+                var resultReporter = new QueueProcessReporter();
+                var subSyncWorkerProvider = new WorkerProvider(logger, subtitleExtensions, fallbackSubtitleProvider, resultReporter);
+                var subSyncWorkerQueue = new WorkerQueue(subSyncWorkerProvider, resultReporter);
 
-                logger.WriteLine("╔═════════════════════════════════════════════════════╗");
-                logger.WriteLine("║       @whi@SubSync v" + version.PadRight(30 - version.Length) + "@gray@              ║");
-                logger.WriteLine("║       ---------------------------------------       ║");
-                logger.WriteLine("║       Copyright (c) 2018 zerratar\\@gmail.com         ║");
-                logger.WriteLine("╚═════════════════════════════════════════════════════╝");
-                //logger.WriteLine("║╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗║");
-                //logger.WriteLine("╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝╚╝");
-                logger.WriteLine("");
-                logger.WriteLine("  Following folder and its subfolders being watched");
-                logger.WriteLine($"    @whi@{input} @gray@");
-                logger.WriteLine("");
-                logger.WriteLine("  You may press @green@'q' @gray@at any time to quit.");
-                logger.WriteLine("");
-                logger.WriteLine(" ───────────────────────────────────────────────────── ");
-                logger.WriteLine("");
-
-                mediaWatcher.Start();
-                ConsoleKeyInfo ck;
-                while ((ck = Console.ReadKey(true)).Key != ConsoleKey.Q)
+                using (var mediaWatcher = new SubtitleSynchronizer(logger, subSyncWorkerQueue, resultReporter, input, videoExtensions, subtitleExtensions))
                 {
-                    if (ck.Key == ConsoleKey.A)
+                    logger.WriteLine("╔════════════════════════════════════════════╗");
+                    logger.WriteLine("║   @whi@SubSync v" + version.PadRight(30 - version.Length) + "@gray@         ║");
+                    logger.WriteLine("║   --------------------------------------   ║");
+                    logger.WriteLine("║   Copyright (c) 2018 zerratar\\@gmail.com    ║");
+                    logger.WriteLine("╚════════════════════════════════════════════╝");
+                    logger.WriteLine("");
+                    logger.WriteLine("  Following folder and its subfolders being watched");
+                    logger.WriteLine($"    @whi@{input} @gray@");
+                    logger.WriteLine("");
+                    logger.WriteLine("  You may press @green@'q' @gray@at any time to quit.");
+                    logger.WriteLine("");
+                    logger.WriteLine(" ───────────────────────────────────────────────────── ");
+                    logger.WriteLine("");
+
+                    mediaWatcher.Start();
+                    ConsoleKeyInfo ck;
+                    while ((ck = Console.ReadKey(true)).Key != ConsoleKey.Q)
                     {
-                        mediaWatcher.SyncAll();
+                        if (ck.Key == ConsoleKey.A)
+                        {
+                            mediaWatcher.SyncAll();
+                        }
+                        System.Threading.Thread.Sleep(10);
                     }
-                    System.Threading.Thread.Sleep(10);
                 }
-                mediaWatcher.Stop();
             }
         }
 

@@ -6,26 +6,31 @@ namespace SubSync
     {
         private readonly ILogger logger;
         private readonly ISubtitleProvider subtitleProvider;
+        private readonly IStatusReporter<WorkerStatus> statusReporter;
         private readonly HashSet<string> subtitleExtensions;
 
         public WorkerProvider(
             ILogger logger,
             HashSet<string> subtitleExtensions,
-            ISubtitleProvider subtitleProvider)
+            ISubtitleProvider subtitleProvider,
+            IStatusReporter<WorkerStatus> statusReporter)
         {
             this.logger = logger;
             this.subtitleProvider = subtitleProvider;
+            this.statusReporter = statusReporter;
             this.subtitleExtensions = subtitleExtensions;
         }
 
-        public IWorker GetWorker(IWorkerQueue queue, string file)
+        public IWorker GetWorker(IWorkerQueue queue, string file, int tryCount = 0)
         {
             return new Worker(
                 file,
-                this.logger,
+                logger,
                 queue,
-                this.subtitleProvider,                
-                subtitleExtensions);
+                subtitleProvider,
+                statusReporter,
+                subtitleExtensions,
+                tryCount);
         }
     }
 }

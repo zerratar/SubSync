@@ -4,10 +4,9 @@ namespace SubSync
 {
     internal interface IWorkerQueue : IDisposable
     {
-        event EventHandler<QueueCompletedEventArgs> QueueCompleted;
-        void Enqueue(string fullFilePath);
-        void Enqueue(IWorker worker);
+        bool Enqueue(string fullFilePath);
         void Start();
         void Stop();
+        void Reset();        
     }
 }
