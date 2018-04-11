@@ -64,7 +64,7 @@ namespace SubSync
 
         public void Reset()
         {
-            queue.Clear();
+            while (queue.TryDequeue(out _)) ;
             queueTries.Clear();
         }
 

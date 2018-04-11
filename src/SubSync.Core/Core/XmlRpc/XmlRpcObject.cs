@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.Serialization;
 
@@ -83,20 +84,30 @@ namespace SubSync
 
         private T DeserializeArray<T>(string dataRoot, Type elementType, PropertyInfo[] properties)
         {
-            dynamic list = Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType));
+            var list = Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType)) as IList;
+            //var listAdd = list.GetType().GetMethod("Add", BindingFlags.Public);
+
             if (FindRecursive(dataRoot) is XmlRpcMember member)
             {
                 if (member.Value is XmlRpcArray array)
                 {
                     foreach (var item in array.Items)
                     {
-                        dynamic value = Deserialize(elementType, item, properties);
-                        list.Add(value);
+                        var value = Deserialize(elementType, item, properties);
+                        list.Add(Convert.ChangeType(value, elementType));
                     }
                 }
             }
 
-            return list.ToArray();
+            var result = Array.CreateInstance(elementType, list.Count);
+            var index = 0;
+            foreach (var item in list)
+            {
+                result.SetValue(item, index++);
+            }
+
+
+            return (T)(object)result;
         }
 
         private object Deserialize(Type targetType, XmlRpcObjectBase item, PropertyInfo[] properties)
@@ -121,8 +132,8 @@ namespace SubSync
                 {
                     if (member.Value is IXmlRpcObjectValue val)
                     {
-                        dynamic v = val.GetValue();
-                        prop.SetValue(instance, v);
+                        var v = val.GetValue();                        
+                        prop.SetValue(instance, Convert.ChangeType(v, prop.PropertyType));
                     }
                 }
             }

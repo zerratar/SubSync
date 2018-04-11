@@ -34,6 +34,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\SubSync.Core\SubSync.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="opensubtitles.auth">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

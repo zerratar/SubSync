@@ -131,7 +131,7 @@ namespace SubSync
                 var episodeGroup = m.Groups["episode"];
                 if (episodeGroup.Success && string.IsNullOrEmpty(episode))
                 {
-                    var item = episodeGroup.Captures.FirstOrDefault();
+                    var item = episodeGroup.Captures[0];
                     if (item != null && !string.IsNullOrEmpty(item.Value))
                     {
                         episode = item.Value;
@@ -141,7 +141,7 @@ namespace SubSync
                 var seasonGroup = m.Groups["season"];
                 if (seasonGroup.Success && string.IsNullOrEmpty(season))
                 {
-                    var item = seasonGroup.Captures.FirstOrDefault();
+                    var item = seasonGroup.Captures[0];
                     if (item != null && !string.IsNullOrEmpty(item.Value))
                     {
                         season = item.Value;
