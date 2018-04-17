@@ -10,7 +10,7 @@ namespace SubSync
     {
         static void Main(string[] args)
         {
-            var input = "./";            
+            var input = "./";
             var videoExtensions = ParseList("*.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm");
             var subtitleExtensions = ParseList("*.srt;*.txt;*.sub;*.idx;*.ssa;*.ass");
             var languages = ParseList("english");
@@ -34,7 +34,7 @@ namespace SubSync
             var logger = new ConsoleLogger();
 
             using (var fallbackSubtitleProvider = new FallbackSubtitleProvider(
-                new OpenSubtitles(languages, new FileBasedCredentialsProvider("opensubtitle.auth", logger)),
+                new OpenSubtitles(languages, new FileBasedCredentialsProvider("opensubtitle.auth", logger), logger),
                 new Subscene(languages)))
             {
                 var resultReporter = new QueueProcessReporter();
