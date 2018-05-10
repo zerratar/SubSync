@@ -1,7 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-[assembly: InternalsVisibleTo("SubSync.Tests")]
-namespace SubSync
+﻿namespace SubSync462
 {
     class Program
     {

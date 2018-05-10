@@ -1,0 +1,6 @@
+# works similar to .gitignore
+# one row per ignore, you can use asterisks for wildcard
+# this will tell SubSync to ignore paths / videos that you don't want synced
+# or just because they don't seem to succeed.
+
+cabin fever*/*

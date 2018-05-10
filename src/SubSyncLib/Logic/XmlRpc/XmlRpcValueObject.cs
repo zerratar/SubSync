@@ -1,0 +1,12 @@
+﻿namespace SubSyncLib.Logic.XmlRpc
+{
+    public abstract class XmlRpcValueObject : XmlRpcObjectBase, IXmlRpcObjectValue
+    {
+        public override XmlRpcObjectBase FindRecursive(string name)
+        {
+            return null;
+        }
+
+        public abstract object GetValue();
+    }
+}

@@ -1,4 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SubSyncLib.Logic.XmlRpc;
+using SubSyncLib.Providers;
 
 namespace SubSync.Tests
 {

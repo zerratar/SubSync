@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SubSync\SubSync.csproj" />
+    <ProjectReference Include="..\..\src\SubSyncLib\SubSyncLib.csproj" />
   </ItemGroup>
 
 </Project>
