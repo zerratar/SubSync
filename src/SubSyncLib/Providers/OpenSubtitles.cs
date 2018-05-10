@@ -49,10 +49,7 @@ namespace SubSyncLib.Providers
             this.credentialProvider = credentialProvider;
             this.logger = logger;
             this.supportedLanguages = GetSupportedLanguages(languages);
-            // until we get our user agent registered for OpenSubtitles.org
-            // we can use a temporary one.
-            // See: http://trac.opensubtitles.org/projects/opensubtitles/wiki/DevReadFirst
-            UserAgent = "TemporaryUserAgent";
+            
             RequestRetryLimit = 3; // max 3 retries, and with some seconds delay is necessary for opensubtitles
             startTime = DateTime.Now.Date;
 
