@@ -49,7 +49,7 @@ namespace SubSyncLib.Providers
             this.credentialProvider = credentialProvider;
             this.logger = logger;
             this.supportedLanguages = GetSupportedLanguages(languages);
-            
+
             RequestRetryLimit = 3; // max 3 retries, and with some seconds delay is necessary for opensubtitles
             startTime = DateTime.Now.Date;
 
@@ -162,7 +162,7 @@ namespace SubSyncLib.Providers
             if (isTvShowEpisode)
             {
                 logger.Debug($"@gray@Searching with query '{query}'...");
-                query = regex.Replace(query, "");
+                //query = regex.Replace(query, "");
                 requestResult = await ApiRequest("SearchSubtitles",
                     Arg("query", query),
                     Arg("sublanguageid", languageList),
@@ -449,6 +449,11 @@ namespace SubSyncLib.Providers
             public string ZipDownloadLink { get; set; }
             public string SubtitleLink { get; set; }
             public string SubRating { get; set; }
+
+            public override string ToString()
+            {
+                return SubFileName ?? MovieReleaseName;
+            }
         }
 
         public class SubtitleData
