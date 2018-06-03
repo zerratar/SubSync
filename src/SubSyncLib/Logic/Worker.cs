@@ -111,6 +111,10 @@ namespace SubSyncLib.Logic
             var inFile = new FileInfo(fileToRename);
             var directory = inFile.Directory?.FullName ?? "./";
             var destFileName = Path.Combine(directory, newFilaNameWithoutExtension + Path.GetExtension(fileToRename));
+            if (System.IO.File.Exists(destFileName))
+            {
+                System.IO.File.Delete(destFileName);
+            }
             inFile.MoveTo(destFileName);
             //File.Move(fileToRename, destFileName);
             return destFileName;
