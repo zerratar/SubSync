@@ -15,7 +15,7 @@ namespace SubSyncLib.Logic
         private readonly IStatusResultReporter<QueueProcessResult> statusReporter;
         private readonly IVideoIgnoreFilter videoIgnore;
         private readonly SubSyncSettings settings;
-        private System.IO.FileSystemWatcher fsWatcher;
+        private FileSystemWatcher fsWatcher;
         private bool disposed;
         private int skipped = 0;
 
@@ -37,47 +37,47 @@ namespace SubSyncLib.Logic
 
         public void Dispose()
         {
-            if (this.disposed) return;
-            this.Stop();
-            this.fsWatcher?.Dispose();
-            this.workerQueue.Dispose();
+            if (disposed) return;
+            Stop();
+            fsWatcher?.Dispose();
+            workerQueue.Dispose();
             disposed = true;
         }
 
         public void Start()
         {
-            if (this.fsWatcher != null) return;
-            this.fsWatcher = new System.IO.FileSystemWatcher(this.settings.Input, "*.*");
-            this.fsWatcher.Error += FsWatcherOnError;
-            this.fsWatcher.IncludeSubdirectories = true;
-            this.fsWatcher.EnableRaisingEvents = true;
-            this.fsWatcher.NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.DirectoryName |
+            if (fsWatcher != null) return;
+            fsWatcher = new FileSystemWatcher(settings.Input, "*.*");
+            fsWatcher.Error += FsWatcherOnError;
+            fsWatcher.IncludeSubdirectories = true;
+            fsWatcher.EnableRaisingEvents = true;
+            fsWatcher.NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.DirectoryName |
                                           NotifyFilters.FileName | NotifyFilters.LastAccess | NotifyFilters.LastWrite |
                                           NotifyFilters.Size | NotifyFilters.Security;
 
-            this.fsWatcher.Created += FileCreated;
-            this.fsWatcher.Renamed += FileCreated;
-            this.statusReporter.OnReportFinished += ResultReport;
-            this.workerQueue.Start();
-            this.SyncAll();
+            fsWatcher.Created += FileCreated;
+            fsWatcher.Renamed += FileCreated;
+            statusReporter.OnReportFinished += ResultReport;
+            workerQueue.Start();
+            SyncAll();
         }
 
         private void StopAndExit()
         {
-            this.Stop();
+            Stop();
             Environment.Exit(0);
         }
 
         public void Stop()
         {
-            if (this.fsWatcher == null) return;
-            this.statusReporter.OnReportFinished -= ResultReport;
-            this.workerQueue.Stop();
-            this.fsWatcher.Error -= FsWatcherOnError;
-            this.fsWatcher.Created -= FileCreated;
-            this.fsWatcher.Renamed -= FileCreated;
-            this.fsWatcher.Dispose();
-            this.fsWatcher = null;
+            if (fsWatcher == null) return;
+            statusReporter.OnReportFinished -= ResultReport;
+            workerQueue.Stop();
+            fsWatcher.Error -= FsWatcherOnError;
+            fsWatcher.Created -= FileCreated;
+            fsWatcher.Renamed -= FileCreated;
+            fsWatcher.Dispose();
+            fsWatcher = null;
         }
 
         private void ResultReport(object sender, QueueProcessResult result)
@@ -92,46 +92,46 @@ namespace SubSyncLib.Logic
                 return;
             }
 
-            this.logger.WriteLine($"");
-            this.logger.WriteLine($" ═════════════════════════════════════════════════════");
-            this.logger.WriteLine($"");
-            this.logger.WriteLine($" @whi@Synchronization completed with a total of @yel@{total} @whi@video(s) processed.");
+            logger.WriteLine($"");
+            logger.WriteLine($" ═════════════════════════════════════════════════════");
+            logger.WriteLine($"");
+            logger.WriteLine($" @whi@Synchronization completed with a total of @yel@{total} @whi@video(s) processed.");
 
-            this.logger.WriteLine($"    {skipcount} video(s) was skipped.");
+            logger.WriteLine($"    {skipcount} video(s) was skipped.");
             if (success > 0)
             {
-                this.logger.WriteLine($"    @green@{success} @whi@video(s) was successefully was synchronized.");
+                logger.WriteLine($"    @green@{success} @whi@video(s) was successefully was synchronized.");
             }
             if (failed.Length > 0)
             {
-                this.logger.WriteLine($"    @red@{failed.Length} @whi@video(s) failed to synchronize.");
+                logger.WriteLine($"    @red@{failed.Length} @whi@video(s) failed to synchronize.");
                 foreach (var failedItem in failed)
                 {
-                    this.logger.WriteLine($"    @red@* {failedItem.Name}");
+                    logger.WriteLine($"    @red@* {failedItem.Name}");
                 }
             }
 
-            this.syncList.Save();
+            syncList.Save();
 
-            if (this.settings.ExitAfterSync)
+            if (settings.ExitAfterSync)
             {
-                this.StopAndExit();
+                StopAndExit();
             }
         }
 
         public void SyncAll()
         {
-            var directoryInfo = new DirectoryInfo(this.settings.Input);
-            this.workerQueue.Reset();
-            this.settings.VideoExt
+            var directoryInfo = new DirectoryInfo(settings.Input);
+            workerQueue.Reset();
+            settings.VideoExt
                 .SelectMany(y => directoryInfo.GetFiles($"*{y}", SearchOption.AllDirectories)).Select(x => x.FullName)
                 .ForEach(Sync);
 
-            if (this.settings.ExitAfterSync
-                && this.workerQueue.Count == 0
-                && this.workerQueue.Active == 0)
+            if (settings.ExitAfterSync
+                && workerQueue.Count == 0
+                && workerQueue.Active == 0)
             {
-                this.StopAndExit();
+                StopAndExit();
             }
         }
 
@@ -147,32 +147,32 @@ namespace SubSyncLib.Logic
                     return;
                 }
 
-                this.workerQueue.Enqueue(video);
+                workerQueue.Enqueue(video);
             }
             catch (Exception exc)
             {
-                this.logger.Error($"Unable to sync subtitles for @yellow@{fullFilePath} @red@, reason: {exc.Message}.");
+                logger.Error($"Unable to sync subtitles for @yellow@{fullFilePath} @red@, reason: {exc.Message}.");
             }
         }
 
         private void FsWatcherOnError(object sender, ErrorEventArgs errorEventArgs)
         {
-            this.logger.Error($"PANIC!! Fatal Media Watcher Error !! {errorEventArgs.GetException().Message}");
+            logger.Error($"PANIC!! Fatal Media Watcher Error !! {errorEventArgs.GetException().Message}");
         }
 
         private void FileCreated(object sender, FileSystemEventArgs e)
         {
-            if (!settings.VideoExt.Contains(System.IO.Path.GetExtension(e.FullPath)))
+            if (!settings.VideoExt.Contains(Path.GetExtension(e.FullPath)))
             {
                 return;
             }
 
-            this.Sync(e.FullPath);
+            Sync(e.FullPath);
         }
 
         private bool IsSynchronized(VideoFile videoFile)
         {
-            if (this.settings.ResyncAll)
+            if (settings.ResyncAll)
             {
                 // regardless, redownload this subtitle
                 return false;
@@ -200,7 +200,7 @@ namespace SubSyncLib.Logic
                 throw new NullReferenceException(nameof(directory));
             }
 
-            if (this.settings.Resync)
+            if (settings.Resync)
             {
                 // normal --resync flag just means we want to redownload any subtitles subsync has not synced.
                 return false;
@@ -225,29 +225,16 @@ namespace SubSyncLib.Logic
 
         public VideoFile(string fullFilePath)
         {
-            this.FilePath = fullFilePath;
-            this.fileInfo = new FileInfo(fullFilePath);
-            this.Hash = Utilities.ComputeMovieHash(fullFilePath);
-            this.HashString = Utilities.ToHexadecimal(this.Hash);
+            FilePath = fullFilePath;
+            fileInfo = new FileInfo(fullFilePath);
+            Hash = Utilities.ComputeMovieHash(fullFilePath);
+            HashString = Utilities.ToHexadecimal(Hash);
         }
 
-        public string HashString { get; }
         public string FilePath { get; }
-
-        public string Name => this.fileInfo.Name;
-
-        public byte[] Hash { get; private set; }
-        public VideoSubtitle Subtitle { get; private set; }
-
-
-        public DirectoryInfo Directory => this.fileInfo.Directory;
-
-        public class VideoSubtitle
-        {
-            public string FilePath { get; private set; }
-            public string Language { get; private set; }
-            public DateTime SyncDate { get; private set; }
-            public byte[] Hash { get; private set; }
-        }
+        public byte[] Hash { get; }
+        public string HashString { get; }
+        public string Name => fileInfo.Name;
+        public DirectoryInfo Directory => fileInfo.Directory;
     }
 }

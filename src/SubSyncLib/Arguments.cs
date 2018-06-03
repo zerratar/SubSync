@@ -158,13 +158,13 @@ namespace SubSyncLib
     {
         public StartupArgumentAttribute(string argName, string defaultValue = null)
         {
-            this.ArgumentName = argName;
+            ArgumentName = argName;
             DefaultValue = defaultValue;
         }
 
         public StartupArgumentAttribute(int argIndex, string defaultValue = null)
         {
-            this.ArgumentIndex = argIndex;
+            ArgumentIndex = argIndex;
             DefaultValue = defaultValue;
         }
 

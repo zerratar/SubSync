@@ -16,7 +16,7 @@ namespace SubSyncLib.Logic.XmlRpc
 
         public T GetValue<T>(string name)
         {
-            if (this.children.Count > 0 && !string.IsNullOrEmpty(name))
+            if (children.Count > 0 && !string.IsNullOrEmpty(name))
             {
                 foreach (var child in children)
                 {

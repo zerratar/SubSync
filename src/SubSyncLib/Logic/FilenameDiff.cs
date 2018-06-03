@@ -20,7 +20,7 @@ namespace SubSyncLib.Logic
                 {
                     return index; // direct match
                 }
-                scored[index++] = FilenameDiff.GetDiffScore(input, item);
+                scored[index++] = GetDiffScore(input, item);
             }
 
             // score: the lower, the better.

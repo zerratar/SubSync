@@ -20,7 +20,7 @@ namespace SubSyncLib.Logic.XmlRpc
 
         public override XmlRpcObjectBase FindRecursive(string name)
         {
-            if (name.Equals(this.Name.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (name.Equals(Name.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 return this;
             }

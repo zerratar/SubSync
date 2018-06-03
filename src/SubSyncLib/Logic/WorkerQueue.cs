@@ -29,18 +29,18 @@ namespace SubSyncLib.Logic
             this.settings = settings;
             this.workerProvider = workerProvider;
             this.statusReporter = statusReporter;
-            this.workerThread = new Thread(ProcessQueue);
+            workerThread = new Thread(ProcessQueue);
         }
 
-        public int Count => this.queue.Count;
+        public int Count => queue.Count;
 
         public int Active => activeJobCount;
 
         public void Dispose()
         {
-            if (this.disposed) return;
-            this.Stop();
-            this.disposed = true;
+            if (disposed) return;
+            Stop();
+            disposed = true;
         }
 
         public bool Enqueue(VideoFile video)
@@ -49,7 +49,7 @@ namespace SubSyncLib.Logic
             if (tries < RetryLimit)
             {
                 queueTries[video.HashString] = tries + 1;
-                queue.Enqueue(this.workerProvider.GetWorker(this, video, tries));
+                queue.Enqueue(workerProvider.GetWorker(this, video, tries));
                 return true;
             }
 
@@ -81,13 +81,13 @@ namespace SubSyncLib.Logic
             var activeJobs = new List<Task>();
             do
             {
-                while (activeJobs.Count < ConcurrentWorkers && this.queue.TryDequeue(out var worker))
+                while (activeJobs.Count < ConcurrentWorkers && queue.TryDequeue(out var worker))
                 {
                     Interlocked.Increment(ref activeJobCount);
 
-                    if (this.settings.MinimummDelayBetweenRequests > 0)
+                    if (settings.MinimummDelayBetweenRequests > 0)
                     {
-                        await Task.Delay(this.settings.MinimummDelayBetweenRequests);
+                        await Task.Delay(settings.MinimummDelayBetweenRequests);
                     }
 
                     activeJobs.Add(worker.SyncAsync());
@@ -106,7 +106,7 @@ namespace SubSyncLib.Logic
                     Thread.Sleep(100);
                 }
 
-            } while (this.enabled);
+            } while (enabled);
         }
     }
 }

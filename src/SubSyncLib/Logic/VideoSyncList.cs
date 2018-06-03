@@ -15,7 +15,7 @@ namespace SubSyncLib.Logic
         {
             if (System.IO.File.Exists(SyncListFile))
             {
-                this.list = new HashSet<string>(System.IO.File.ReadAllLines(SyncListFile).Where(x => !string.IsNullOrEmpty(x)));
+                list = new HashSet<string>(System.IO.File.ReadAllLines(SyncListFile).Where(x => !string.IsNullOrEmpty(x)));
             }
         }
 
@@ -23,7 +23,7 @@ namespace SubSyncLib.Logic
         {
             lock (mutex)
             {
-                return this.list.Contains(video.HashString);
+                return list.Contains(video.HashString);
             }
         }
 
@@ -31,7 +31,7 @@ namespace SubSyncLib.Logic
         {
             lock (mutex)
             {
-                this.list.Add(video.HashString);
+                list.Add(video.HashString);
             }
         }
 
@@ -40,7 +40,7 @@ namespace SubSyncLib.Logic
             lock (mutex)
             {
                 var sb = new StringBuilder();
-                foreach (var item in this.list) sb.AppendLine(item);
+                foreach (var item in list) sb.AppendLine(item);
                 System.IO.File.WriteAllText(SyncListFile, sb.ToString());
             }
         }

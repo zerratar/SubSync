@@ -32,31 +32,31 @@ namespace SubSyncLib.Logic
                     var data = line.Split('=');
                     if (data[0].Equals("username", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        this.username = data[1];
+                        username = data[1];
                     }
                     else if (data[0].Equals("password", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        this.password = data[1];
+                        password = data[1];
                     }
                 }
                 synchronizedWithFile = true;
             }
             catch (Exception exc)
             {
-                this.logger.WriteLine("@yel@Unable to read opensubtitles.auth! username and password will be left blank!");
+                logger.WriteLine("@yel@Unable to read opensubtitles.auth! username and password will be left blank!");
             }
 
         }
 
         public AuthCredentials Get()
         {
-            if (!this.synchronizedWithFile)
+            if (!synchronizedWithFile)
             {
                 // in case it previously failed or file was added after the application started.
-                this.ReadFile();
+                ReadFile();
             }
 
-            return new AuthCredentials(this.username, this.password);
+            return new AuthCredentials(username, password);
         }
     }
 }

@@ -48,7 +48,7 @@ namespace SubSyncLib.Providers
         {
             this.credentialProvider = credentialProvider;
             this.logger = logger;
-            this.supportedLanguages = GetSupportedLanguages(languages);
+            supportedLanguages = GetSupportedLanguages(languages);
 
             RequestRetryLimit = 3; // max 3 retries, and with some seconds delay is necessary for opensubtitles
             startTime = DateTime.Now.Date;
@@ -63,18 +63,18 @@ namespace SubSyncLib.Providers
 
         public void Dispose()
         {
-            if (this.disposed)
+            if (disposed)
             {
                 return;
             }
 
-            this.disposed = true;
-            if (this.isAuthenticated)
+            disposed = true;
+            if (isAuthenticated)
             {
                 LogoutAsync();
             }
 
-            this.keepAliveThread.Join();
+            keepAliveThread.Join();
         }
 
         public override async Task<string> GetAsync(VideoFile video)//string name, string outputDirectory)
@@ -253,9 +253,9 @@ namespace SubSyncLib.Providers
 
         private Task<XmlRpcObject> LoginAsync(AuthCredentials credentials)
         {
-            this.authenticationToken = null;
-            this.isAuthenticated = false;
-            this.isVip = false;
+            authenticationToken = null;
+            isAuthenticated = false;
+            isVip = false;
             return ApiRequest("LogIn", Arg(credentials.Username), Arg(credentials.Password), Arg("en"), Arg(UserAgent));
         }
 
@@ -311,7 +311,7 @@ namespace SubSyncLib.Providers
             var lastKeepAliveMessage = DateTime.Now;
             while (!disposed)
             {
-                if (this.isAuthenticated)
+                if (isAuthenticated)
                 {
                     if (DateTime.Now - lastKeepAliveMessage > TimeSpan.FromSeconds(keepAliveInterval))
                     {
@@ -375,7 +375,7 @@ namespace SubSyncLib.Providers
             // may do this correctly in the future. but meh
             var sb = new StringBuilder();
             sb.Append($"<methodCall><methodName>{method}</methodName><params>");
-            var tokenRequest = this.isAuthenticated && !string.IsNullOrEmpty(authenticationToken);
+            var tokenRequest = isAuthenticated && !string.IsNullOrEmpty(authenticationToken);
             if (tokenRequest)
             {
                 sb.Append($"<param><value><string>{authenticationToken}</string></value></param>");

@@ -61,13 +61,13 @@ namespace SubSyncLib.Logic
             {
                 Task.Factory.StartNew(async () =>
                 {
-                    if (this.retryCount > 0)
+                    if (retryCount > 0)
                     {
-                        await Task.Delay(this.retryCount * 1000);
+                        await Task.Delay(retryCount * 1000);
                     }
 
                     //var file = new FileInfo(filePath);
-                    this.logger.WriteLine($"Synchronizing {video.Name}");
+                    logger.WriteLine($"Synchronizing {video.Name}");
                     try
                     {
                         var outputName = await subtitleProvider.GetAsync(video);
@@ -78,25 +78,25 @@ namespace SubSyncLib.Logic
                         }
 
                         var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(video.Name));
-                        this.logger.WriteLine(
+                        logger.WriteLine(
                             $"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
-                        this.statusReporter.Report(new WorkerStatus(true, video));
-                        this.taskCompletionSource.SetResult(true);
+                        statusReporter.Report(new WorkerStatus(true, video));
+                        taskCompletionSource.SetResult(true);
                     }
                     catch (NestedArchiveNotSupportedException nexc)
                     {
-                        this.logger.Error($"Synchronization of {video.Name} failed with: {nexc.Message}");
-                        this.statusReporter.Report(new WorkerStatus(false, video));
-                        this.taskCompletionSource.SetException(nexc);
+                        logger.Error($"Synchronization of {video.Name} failed with: {nexc.Message}");
+                        statusReporter.Report(new WorkerStatus(false, video));
+                        taskCompletionSource.SetException(nexc);
                     }
                     catch (Exception exc)
                     {
-                        this.logger.Error($"Synchronization of {video.Name} failed with: {exc.Message}");
-                        if (!this.workerQueue.Enqueue(video)) // (this);
+                        logger.Error($"Synchronization of {video.Name} failed with: {exc.Message}");
+                        if (!workerQueue.Enqueue(video)) // (this);
                         {
-                            this.statusReporter.Report(new WorkerStatus(false, video));
+                            statusReporter.Report(new WorkerStatus(false, video));
                         }
-                        this.taskCompletionSource.SetException(exc);
+                        taskCompletionSource.SetException(exc);
                     }
 
                 }, TaskCreationOptions.LongRunning);
@@ -156,7 +156,7 @@ namespace SubSyncLib.Logic
 
                     // TODO: This need to match the subtitles to determine whether its for the right video or not.
                     // check if any of the entries are archives and unpack it if one exists.
-                    var archive = reader.Entries.FirstOrDefault(x => IsCompressed(System.IO.Path.GetExtension(x.Key)));
+                    var archive = reader.Entries.FirstOrDefault(x => IsCompressed(Path.GetExtension(x.Key)));
                     if (archive != null)
                     {
                         logger.WriteLine($"@yel@Warning: Nested archive found inside '{filename}', output subtitle may not be correct!");
@@ -187,7 +187,7 @@ namespace SubSyncLib.Logic
                 ext = ".srt";
             }
 
-            var subtitleFound = this.subtitleExtensions.Contains(ext?.ToLower());
+            var subtitleFound = subtitleExtensions.Contains(ext?.ToLower());
             if (!subtitleFound)
             {
                 return new EntryUnpackResult(subtitleFound: false, filename: null, entry: entry.Key);
@@ -200,7 +200,7 @@ namespace SubSyncLib.Logic
         {
             var ext = Path.GetExtension(entry.Key);
             if (entry.Key.ToLower().EndsWith(".srt.txt")) ext = ".srt";
-            var subtitleFound = this.subtitleExtensions.Contains(ext?.ToLower());
+            var subtitleFound = subtitleExtensions.Contains(ext?.ToLower());
             var targetFile = Path.Combine(directory, Path.ChangeExtension(entry.Key.Replace("?", ""), ext));
             var dir = new FileInfo(targetFile).Directory;
             if (dir != null && !dir.Exists)
@@ -240,9 +240,9 @@ namespace SubSyncLib.Logic
 
             public EntryUnpackResult(bool subtitleFound, string filename, string entry)
             {
-                this.SubtitleFound = subtitleFound;
-                this.Filename = filename;
-                this.Entry = entry;
+                SubtitleFound = subtitleFound;
+                Filename = filename;
+                Entry = entry;
             }
         }
     }

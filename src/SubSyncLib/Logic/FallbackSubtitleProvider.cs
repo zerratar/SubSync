@@ -38,19 +38,19 @@ namespace SubSyncLib.Logic
                     throw exc;
                 }
 
-                return await this.GetAsync(video);
+                return await GetAsync(video);
             }
         }
 
         public void Dispose()
         {
-            if (this.disposed)
+            if (disposed)
             {
                 return;
             }
 
-            this.disposed = true;
-            foreach (var provider in this._providers)
+            disposed = true;
+            foreach (var provider in _providers)
             {
                 try
                 {

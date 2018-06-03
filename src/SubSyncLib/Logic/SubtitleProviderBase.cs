@@ -14,7 +14,7 @@ namespace SubSyncLib.Logic
 
         protected SubtitleProviderBase(HashSet<string> languages)
         {
-            this.Languages = languages;
+            Languages = languages;
         }
 
         protected string UserAgent { get; set; } = "SubSync10";
@@ -41,7 +41,7 @@ namespace SubSyncLib.Logic
                             filename = newFileName;
                     }
 
-                    var outputFile = System.IO.Path.Combine(outputDirectory, filename);
+                    var outputFile = Path.Combine(outputDirectory, filename);
                     using (var stream = response.GetResponseStream())
                     {
                         var file = new FileInfo(outputFile);
@@ -168,7 +168,7 @@ namespace SubSyncLib.Logic
 
         private HttpWebRequest CreateRequest(string url, string method = "GET")
         {
-            var req = HttpWebRequest.CreateHttp(url);
+            var req = WebRequest.CreateHttp(url);
             req.Method = method;
             req.UserAgent = UserAgent;
             req.Timeout = req.ReadWriteTimeout = RequestTimeout;

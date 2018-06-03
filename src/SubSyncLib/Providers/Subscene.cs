@@ -26,7 +26,7 @@ namespace SubSyncLib.Providers
             }
 
             var subtitlePageContent = await DownloadStringAsync(url);
-            foreach (var language in this.Languages)
+            foreach (var language in Languages)
             {
                 var match = Regex.Match(subtitlePageContent, $@"\/subtitles\/{language}-text\/[a-zA-Z0-9_-]*");
                 if (match.Success)
@@ -45,7 +45,7 @@ namespace SubSyncLib.Providers
             var searchUrl = string.Format(SearchApiUrlFormat, searchName);
             var searchPageContent = await DownloadStringAsync(searchUrl);
 
-            foreach (var language in this.Languages)
+            foreach (var language in Languages)
             {
                 var match = Regex.Match(searchPageContent, $@"\/subtitles\/.*\/{language}\/[0-9]+");
 

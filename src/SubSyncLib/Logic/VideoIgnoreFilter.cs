@@ -42,14 +42,14 @@ namespace SubSyncLib.Logic
 
         public bool Match(VideoFile video)
         {
-            return this.Match(video.FilePath);
+            return Match(video.FilePath);
         }
 
         public bool Match(string filepath)
         {
             // return true if filter match
             filepath = filepath.Replace('\\', '/');
-            foreach (var filter in this.filters)
+            foreach (var filter in filters)
             {
                 if (filter.Match(filepath))
                 {
@@ -72,7 +72,7 @@ namespace SubSyncLib.Logic
 
         public bool Match(VideoFile video)
         {
-            return this.Match(video.FilePath);
+            return Match(video.FilePath);
         }
 
         public bool Match(string filepath)
@@ -87,11 +87,11 @@ namespace SubSyncLib.Logic
 
         public FuzzyFilter(string filter)
         {
-            this.filterParts = filter.Split('*');
+            filterParts = filter.Split('*');
         }
         public bool Match(VideoFile video)
         {
-            return this.Match(video.FilePath);
+            return Match(video.FilePath);
         }
 
         public bool Match(string filepath)
