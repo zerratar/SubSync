@@ -5,6 +5,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using SharpCompress.Archives;
+using SharpCompress.Common;
+using SharpCompress.Readers;
+using SharpCompress.Readers.Rar;
 using SubSyncLib.Logic.Exceptions;
 
 namespace SubSyncLib.Logic
@@ -148,16 +151,31 @@ namespace SubSyncLib.Logic
                 using (var fileReader = file.OpenRead())
                 using (var reader = archiveOpener(fileReader))
                 {
-                    foreach (var entry in reader.Entries)
+                    if (reader.IsSolid)
                     {
-                        var result = await UnpackSubtitleEntryAsync(entry, directory);
-                        if (result.SubtitleFound)
+                        var entryReader = reader.ExtractAllEntries();
+                        while (entryReader.MoveToNextEntry())
                         {
-                            targetFile = result.Filename;
-                            return result.Filename;
+                            var result = await UnpackSubtitleEntryAsync(entryReader, entryReader.Entry, directory);
+                            if (result.SubtitleFound)
+                            {
+                                targetFile = result.Filename;
+                                return result.Filename;
+                            }
                         }
                     }
-
+                    else
+                    {
+                        foreach (var entry in reader.Entries)
+                        {
+                            var result = await UnpackSubtitleEntryAsync(entry, directory);
+                            if (result.SubtitleFound)
+                            {
+                                targetFile = result.Filename;
+                                return result.Filename;
+                            }
+                        }
+                    }
                     // TODO: This need to match the subtitles to determine whether its for the right video or not.
                     // check if any of the entries are archives and unpack it if one exists.
                     var archive = reader.Entries.FirstOrDefault(x => IsCompressed(Path.GetExtension(x.Key)));
@@ -182,9 +200,25 @@ namespace SubSyncLib.Logic
             throw new FileNotFoundException($"No suitable subtitle found in the downloaded archive, {filename}. Archive kept just in case.");
         }
 
+        private async Task<EntryUnpackResult> UnpackSubtitleEntryAsync(IReader reader, IEntry entry, string directory)
+        {
+            if (!TestEntryAsSubtitle(entry, out var unpackSubtitleEntryAsync)) return unpackSubtitleEntryAsync;
+
+            return await UnpackEntryAsync(reader, entry, directory);
+        }
 
         private async Task<EntryUnpackResult> UnpackSubtitleEntryAsync(IArchiveEntry entry, string directory)
         {
+            if (!TestEntryAsSubtitle(entry, out var unpackSubtitleEntryAsync)) return unpackSubtitleEntryAsync;
+
+            return await UnpackEntryAsync(entry, directory);
+        }
+
+        private bool TestEntryAsSubtitle(IEntry entry, out EntryUnpackResult unpackSubtitleEntryAsync)
+        {
+            unpackSubtitleEntryAsync =
+                new EntryUnpackResult(subtitleFound: false, filename: null, entry: entry.Key);
+
             var ext = Path.GetExtension(entry.Key);
             if (entry.Key.ToLower().EndsWith(".srt.txt"))
             {
@@ -194,13 +228,23 @@ namespace SubSyncLib.Logic
             var subtitleFound = subtitleExtensions.Contains(ext?.ToLower());
             if (!subtitleFound)
             {
-                return new EntryUnpackResult(subtitleFound: false, filename: null, entry: entry.Key);
+                return false;
             }
 
-            return await UnpackEntryAsync(entry, directory);
+            return true;
         }
 
-        private async Task<EntryUnpackResult> UnpackEntryAsync(IArchiveEntry entry, string directory)
+        private Task<EntryUnpackResult> UnpackEntryAsync(IReader reader, IEntry entry, string directory)
+        {
+            return this.UnpackEntryAsync(reader.OpenEntryStream, entry, directory);
+        }
+
+        private Task<EntryUnpackResult> UnpackEntryAsync(IArchiveEntry entry, string directory)
+        {          
+            return this.UnpackEntryAsync(entry.OpenEntryStream, entry, directory);
+        }
+
+        private async Task<EntryUnpackResult> UnpackEntryAsync(Func<Stream> entryStreamProvider, IEntry entry, string directory)
         {
             var ext = Path.GetExtension(entry.Key);
             if (entry.Key.ToLower().EndsWith(".srt.txt")) ext = ".srt";
@@ -213,7 +257,7 @@ namespace SubSyncLib.Logic
             }
 
             var targetFileInfo = new FileInfo(targetFile);
-            using (var entryStream = entry.OpenEntryStream())
+            using (var entryStream = entryStreamProvider())
             using (var sw = targetFileInfo.Create())//new FileStream(targetFile, FileMode.Create))
             {
                 var read = 0;
