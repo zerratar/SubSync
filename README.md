@@ -25,7 +25,7 @@ Load up Visual Studio 2017, open SubSync.sln and hit CTRL+SHIFT+B like your life
 
 ## Running SubSync
 ```batch
-SubSync.exe <input folder> [-lang <languages>] [-vid <video extensions>] [-sub <subtitle extensions>] [-exit]
+SubSync.exe <input folder> [-lang <languages>] [-vid <video extensions>] [-sub <subtitle extensions>] [-delay <ms>] [-exit]
 
 <input folder>: So this is the folder you want to watch, it will also watch all its subfolders.
                 As an example: 'D:\Movies'
@@ -49,7 +49,14 @@ SubSync.exe <input folder> [-lang <languages>] [-vid <video extensions>] [-sub <
                        to change which subtitles SubSync should recognize. The default value is:
                        *.srt;*.txt;*.sub;*.idx;*.ssa;*.ass
 
--exit: if you don't want to keep SubSync running, you can have it automatically exit as soon as its done syncing
+-delay
+<ms>: If you want to have a delay between each request by a set of milliseconds you can use this flag. 
+      This will then run all request sequential instead of concurrent which will take a lot longer to download
+      all subtitles. However by adding a delay you have a greater chance of the server giving you a proper response
+      and therefor can make the download more stable. 
+      The value is set to 0 as default and therefor disabled.
+
+-exit: If you don't want to keep SubSync running, you can have it automatically exit as soon as its done syncing
        your subtitles, remember this will exit even if there are no subtitles to sync.
 ```
 

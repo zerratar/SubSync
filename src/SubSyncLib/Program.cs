@@ -25,6 +25,10 @@ namespace SubSyncLib
 
         [StartupArgument("exit")]
         public bool ExitAfterSync { get; set; }
+
+        // using this will force requests to be sequential rather than concurrent
+        [StartupArgument("delay", "0")]
+        public int MinimummDelayBetweenRequests { get; set; }
     }
 
     public class Program
@@ -33,11 +37,11 @@ namespace SubSyncLib
         {
             var settings = Arguments.Parse<SubSyncSettings>(args);
 
-            // ugly workaround for ending backslashes with single/double-quotes. Seem to be a bug in the dotnet!
-            if (!string.IsNullOrEmpty(settings.Input) && (settings.Input.EndsWith("\"") || settings.Input.EndsWith("'")))
-            {
-                settings.Input = settings.Input.Substring(0, settings.Input.Length - 1);
-            }
+            //// ugly workaround for ending backslashes with single/double-quotes. Seem to be a bug in the dotnet!
+            //if (!string.IsNullOrEmpty(settings.Input) && (settings.Input.EndsWith("\"") || settings.Input.EndsWith("'")))
+            //{
+            //    settings.Input = settings.Input.Substring(0, settings.Input.Length - 1);
+            //}
 
             var subtitleExtensions = settings.SubtitleExt;
             var languages = settings.Languages;
@@ -52,7 +56,7 @@ namespace SubSyncLib
             {
                 var resultReporter = new QueueProcessReporter();
                 var subSyncWorkerProvider = new WorkerProvider(logger, subtitleExtensions, fallbackSubtitleProvider, resultReporter);
-                var subSyncWorkerQueue = new WorkerQueue(subSyncWorkerProvider, resultReporter);
+                var subSyncWorkerQueue = new WorkerQueue(settings, subSyncWorkerProvider, resultReporter);
 
                 using (var mediaWatcher = new SubtitleSynchronizer(
                     logger, subSyncWorkerQueue, resultReporter, videoIgnoreFilter, settings))
@@ -68,6 +72,14 @@ namespace SubSyncLib
                     logger.WriteLine("");
                     logger.WriteLine("  You may press @green@'q' @gray@at any time to quit.");
                     logger.WriteLine("");
+
+                    if (settings.MinimummDelayBetweenRequests > 0)
+                    {
+                        logger.WriteLine($"  @yel@Request delay: @red@{settings.MinimummDelayBetweenRequests}ms @yel@activated.");
+                        logger.WriteLine($"  @yel@All requests will be run in sequential order and may take a lot longer to sync.");
+                        logger.WriteLine("");
+                    }
+
                     logger.WriteLine(" ───────────────────────────────────────────────────── ");
                     logger.WriteLine("");
 

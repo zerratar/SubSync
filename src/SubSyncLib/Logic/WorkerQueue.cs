@@ -9,6 +9,7 @@ namespace SubSyncLib.Logic
     public class WorkerQueue : IWorkerQueue
     {
         private const int ConcurrentWorkers = 5;
+        private readonly SubSyncSettings settings;
         private readonly IWorkerProvider workerProvider;
         private readonly IStatusReporter statusReporter;
         private readonly ConcurrentQueue<IWorker> queue = new ConcurrentQueue<IWorker>();
@@ -23,8 +24,9 @@ namespace SubSyncLib.Logic
         // the max times the same item can be enqueued.
         private const int RetryLimit = 3;
 
-        public WorkerQueue(IWorkerProvider workerProvider, IStatusReporter statusReporter)
+        public WorkerQueue(SubSyncSettings settings, IWorkerProvider workerProvider, IStatusReporter statusReporter)
         {
+            this.settings = settings;
             this.workerProvider = workerProvider;
             this.statusReporter = statusReporter;
             this.workerThread = new Thread(ProcessQueue);
@@ -82,6 +84,11 @@ namespace SubSyncLib.Logic
                 while (activeJobs.Count < ConcurrentWorkers && this.queue.TryDequeue(out var worker))
                 {
                     Interlocked.Increment(ref activeJobCount);
+
+                    if (this.settings.MinimummDelayBetweenRequests > 0)
+                    {
+                        await Task.Delay(this.settings.MinimummDelayBetweenRequests);
+                    }
 
                     activeJobs.Add(worker.SyncAsync());
                 }
