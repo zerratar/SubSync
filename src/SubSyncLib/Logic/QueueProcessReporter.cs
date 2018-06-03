@@ -6,7 +6,7 @@ namespace SubSyncLib.Logic
 {
     public class QueueProcessReporter : IStatusReporter<WorkerStatus>, IStatusResultReporter<QueueProcessResult>
     {
-        private readonly List<string> failed = new List<string>();
+        private readonly List<VideoFile> failed = new List<VideoFile>();
         private readonly object reportMutex = new object();
         private int total = 0;
         private int succeeded = 0;

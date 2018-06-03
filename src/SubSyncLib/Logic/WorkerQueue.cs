@@ -43,13 +43,13 @@ namespace SubSyncLib.Logic
             this.disposed = true;
         }
 
-        public bool Enqueue(string fullFilePath)
+        public bool Enqueue(VideoFile video)
         {
-            queueTries.TryGetValue(fullFilePath, out var tries);
+            queueTries.TryGetValue(video.HashString, out var tries);
             if (tries < RetryLimit)
             {
-                queueTries[fullFilePath] = tries + 1;
-                queue.Enqueue(this.workerProvider.GetWorker(this, fullFilePath, tries));
+                queueTries[video.HashString] = tries + 1;
+                queue.Enqueue(this.workerProvider.GetWorker(this, video, tries));
                 return true;
             }
 

@@ -29,6 +29,12 @@ namespace SubSyncLib
         // using this will force requests to be sequential rather than concurrent
         [StartupArgument("delay", "0")]
         public int MinimummDelayBetweenRequests { get; set; }
+
+        [StartupArgument("resync")]
+        public bool Resync { get; set; }
+
+        [StartupArgument("resyncall")]
+        public bool ResyncAll { get; set; }
     }
 
     public class Program
@@ -50,7 +56,9 @@ namespace SubSyncLib
             var version = GetVersion();
             var logger = new ConsoleLogger();
             var videoIgnoreFilter = new VideoIgnoreFilter(ReadVideoIgnoreList());
+            var videoSyncList = new VideoSyncList();
             using (var fallbackSubtitleProvider = new FallbackSubtitleProvider(
+                videoSyncList,
                 new OpenSubtitles(languages, new FileBasedCredentialsProvider("opensubtitle.auth", logger), logger),
                 new Subscene(languages)))
             {
@@ -59,7 +67,7 @@ namespace SubSyncLib
                 var subSyncWorkerQueue = new WorkerQueue(settings, subSyncWorkerProvider, resultReporter);
 
                 using (var mediaWatcher = new SubtitleSynchronizer(
-                    logger, subSyncWorkerQueue, resultReporter, videoIgnoreFilter, settings))
+                    logger, videoSyncList, subSyncWorkerQueue, resultReporter, videoIgnoreFilter, settings))
                 {
                     logger.WriteLine("╔════════════════════════════════════════════╗");
                     logger.WriteLine("║   @whi@SubSync v" + version.PadRight(30 - version.Length) + "@gray@         ║");

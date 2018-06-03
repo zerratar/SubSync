@@ -21,10 +21,10 @@ namespace SubSyncLib.Logic
             this.subtitleExtensions = subtitleExtensions;
         }
 
-        public IWorker GetWorker(IWorkerQueue queue, string file, int tryCount = 0)
+        public IWorker GetWorker(IWorkerQueue queue, VideoFile video, int tryCount = 0)
         {
             return new Worker(
-                file,
+                video,
                 logger,
                 queue,
                 subtitleProvider,

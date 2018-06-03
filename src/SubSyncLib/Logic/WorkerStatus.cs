@@ -3,9 +3,9 @@
     public struct WorkerStatus
     {
         public readonly bool Succeeded;
-        public readonly string Target;
+        public readonly VideoFile Target;
 
-        public WorkerStatus(bool succeeded, string target)
+        public WorkerStatus(bool succeeded, VideoFile target)
         {
             Succeeded = succeeded;
             Target = target;

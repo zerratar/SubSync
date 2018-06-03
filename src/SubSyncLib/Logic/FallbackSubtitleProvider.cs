@@ -7,35 +7,38 @@ namespace SubSyncLib.Logic
     public class FallbackSubtitleProvider : ISubtitleProvider, IDisposable
     {
         private readonly ConcurrentDictionary<string, int> providerCache = new ConcurrentDictionary<string, int>();
+        private readonly IVideoSyncList syncList;
         private readonly ISubtitleProvider[] _providers;
         private readonly int MaxRetryCount = 3;
         private bool disposed;
 
-        public FallbackSubtitleProvider(params ISubtitleProvider[] providers)
+        public FallbackSubtitleProvider(IVideoSyncList syncList, params ISubtitleProvider[] providers)
         {
+            this.syncList = syncList;
             _providers = providers;
             MaxRetryCount = Math.Max(MaxRetryCount, _providers.Length);
         }
 
-        public async Task<string> GetAsync(string name, string outputDirectory)
+        public async Task<string> GetAsync(VideoFile video)
         {
-            providerCache.TryGetValue(name, out var index);
+            providerCache.TryGetValue(video.HashString, out var index);
             try
             {
-                var result = await _providers[index].GetAsync(name, outputDirectory);
-                providerCache.TryRemove(name, out _);
+                var result = await _providers[index].GetAsync(video);
+                providerCache.TryRemove(video.HashString, out _);
+                syncList.Add(video);
                 return result;
             }
             catch (Exception exc)
             {
-                providerCache[name] = index + 1;
+                providerCache[video.HashString] = index + 1;
                 if (index + 1 > MaxRetryCount || index + 1 >= _providers.Length)
                 {
-                    providerCache.TryRemove(name, out _);
+                    providerCache.TryRemove(video.HashString, out _);
                     throw exc;
                 }
 
-                return await this.GetAsync(name, outputDirectory);
+                return await this.GetAsync(video);
             }
         }
 

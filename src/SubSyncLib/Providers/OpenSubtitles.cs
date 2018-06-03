@@ -77,10 +77,11 @@ namespace SubSyncLib.Providers
             this.keepAliveThread.Join();
         }
 
-        public override async Task<string> GetAsync(string name, string outputDirectory)
+        public override async Task<string> GetAsync(VideoFile video)//string name, string outputDirectory)
         {
             AssertWithinRequestLimits();
-
+            var name = video.Name;
+            var outputDirectory = video.Directory?.FullName ?? "./";
             logger.Debug($"get-async: '{name}'");
 
             await LoginIfRequiredAsync();

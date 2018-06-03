@@ -11,7 +11,7 @@ namespace SubSyncLib.Logic
 {
     public class Worker : IWorker
     {
-        private readonly string filePath;
+        private readonly VideoFile video;
         private readonly ILogger logger;
         private readonly IWorkerQueue workerQueue;
         private readonly ISubtitleProvider subtitleProvider;
@@ -27,7 +27,7 @@ namespace SubSyncLib.Logic
         private TaskCompletionSource<object> taskCompletionSource = null;
 
         public Worker(
-            string filePath,
+            VideoFile video,
             ILogger logger,
             IWorkerQueue workerQueue,
             ISubtitleProvider subtitleProvider,
@@ -35,7 +35,7 @@ namespace SubSyncLib.Logic
             HashSet<string> subtitleExtensions,
             int retryCount = 0)
         {
-            this.filePath = filePath;
+            this.video = video;
             this.logger = logger;
             this.workerQueue = workerQueue;
             this.subtitleProvider = subtitleProvider;
@@ -66,36 +66,35 @@ namespace SubSyncLib.Logic
                         await Task.Delay(this.retryCount * 1000);
                     }
 
-                    var file = new FileInfo(filePath);
-                    this.logger.WriteLine($"Synchronizing {file.Name}");
+                    //var file = new FileInfo(filePath);
+                    this.logger.WriteLine($"Synchronizing {video.Name}");
                     try
                     {
-                        var directory = file.Directory?.FullName ?? "./";
-                        var outputName = await subtitleProvider.GetAsync(file.Name, directory);
+                        var outputName = await subtitleProvider.GetAsync(video);
                         var extension = Path.GetExtension(outputName);
                         if (IsCompressed(extension))
                         {
                             outputName = await DecompressAsync(outputName);
                         }
 
-                        var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(file.Name));
+                        var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(video.Name));
                         this.logger.WriteLine(
                             $"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
-                        this.statusReporter.Report(new WorkerStatus(true, file.Name));
+                        this.statusReporter.Report(new WorkerStatus(true, video));
                         this.taskCompletionSource.SetResult(true);
                     }
                     catch (NestedArchiveNotSupportedException nexc)
                     {
-                        this.logger.Error($"Synchronization of {file.Name} failed with: {nexc.Message}");
-                        this.statusReporter.Report(new WorkerStatus(false, file.Name));
+                        this.logger.Error($"Synchronization of {video.Name} failed with: {nexc.Message}");
+                        this.statusReporter.Report(new WorkerStatus(false, video));
                         this.taskCompletionSource.SetException(nexc);
                     }
                     catch (Exception exc)
                     {
-                        this.logger.Error($"Synchronization of {file.Name} failed with: {exc.Message}");
-                        if (!this.workerQueue.Enqueue(filePath)) // (this);
+                        this.logger.Error($"Synchronization of {video.Name} failed with: {exc.Message}");
+                        if (!this.workerQueue.Enqueue(video)) // (this);
                         {
-                            this.statusReporter.Report(new WorkerStatus(false, file.Name));
+                            this.statusReporter.Report(new WorkerStatus(false, video));
                         }
                         this.taskCompletionSource.SetException(exc);
                     }

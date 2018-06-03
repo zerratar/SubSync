@@ -4,9 +4,9 @@
     {
         public readonly int Total;
         public readonly int Succeeded;
-        public readonly string[] Failed;
+        public readonly VideoFile[] Failed;
 
-        public QueueProcessResult(int total, int succeeded, string[] failed)
+        public QueueProcessResult(int total, int succeeded, VideoFile[] failed)
         {
             Total = total;
             Succeeded = succeeded;

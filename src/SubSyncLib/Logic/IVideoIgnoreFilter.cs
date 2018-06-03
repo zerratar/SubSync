@@ -3,5 +3,6 @@
     public interface IVideoIgnoreFilter
     {
         bool Match(string filepath);
+        bool Match(VideoFile video);
     }
 }

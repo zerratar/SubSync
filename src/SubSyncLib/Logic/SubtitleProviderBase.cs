@@ -23,7 +23,7 @@ namespace SubSyncLib.Logic
 
         protected int RequestTimeout { get; set; } = 3000;
 
-        public abstract Task<string> GetAsync(string name, string outputDirectory);
+        public abstract Task<string> GetAsync(VideoFile video);
 
         protected async Task<string> DownloadFileAsync(string url, string outputDirectory, int retryCount = 0)
         {

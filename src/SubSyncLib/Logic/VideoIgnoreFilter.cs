@@ -40,6 +40,11 @@ namespace SubSyncLib.Logic
             return new EndsWithFilter(filter);
         }
 
+        public bool Match(VideoFile video)
+        {
+            return this.Match(video.FilePath);
+        }
+
         public bool Match(string filepath)
         {
             // return true if filter match
@@ -65,6 +70,11 @@ namespace SubSyncLib.Logic
             _filter = filter;
         }
 
+        public bool Match(VideoFile video)
+        {
+            return this.Match(video.FilePath);
+        }
+
         public bool Match(string filepath)
         {
             return _filter.EndsWith(filepath, StringComparison.OrdinalIgnoreCase);
@@ -78,6 +88,10 @@ namespace SubSyncLib.Logic
         public FuzzyFilter(string filter)
         {
             this.filterParts = filter.Split('*');
+        }
+        public bool Match(VideoFile video)
+        {
+            return this.Match(video.FilePath);
         }
 
         public bool Match(string filepath)
@@ -99,5 +113,6 @@ namespace SubSyncLib.Logic
     internal class PassthroughFilter : IVideoIgnoreFilter
     {
         public bool Match(string filepath) => false;
+        public bool Match(VideoFile video) => false;
     }
 }

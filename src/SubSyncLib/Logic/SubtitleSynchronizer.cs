@@ -10,6 +10,7 @@ namespace SubSyncLib.Logic
     public class SubtitleSynchronizer : IFileSystemWatcher, IDisposable
     {
         private readonly ILogger logger;
+        private readonly IVideoSyncList syncList;
         private readonly IWorkerQueue workerQueue;
         private readonly IStatusResultReporter<QueueProcessResult> statusReporter;
         private readonly IVideoIgnoreFilter videoIgnore;
@@ -20,12 +21,14 @@ namespace SubSyncLib.Logic
 
         public SubtitleSynchronizer(
             ILogger logger,
+            IVideoSyncList syncList,
             IWorkerQueue workerQueue,
             IStatusResultReporter<QueueProcessResult> statusReporter,
             IVideoIgnoreFilter videoIgnore,
             SubSyncSettings settings)
         {
             this.logger = logger;
+            this.syncList = syncList;
             this.workerQueue = workerQueue;
             this.statusReporter = statusReporter;
             this.videoIgnore = videoIgnore;
@@ -104,9 +107,11 @@ namespace SubSyncLib.Logic
                 this.logger.WriteLine($"    @red@{failed.Length} @whi@video(s) failed to synchronize.");
                 foreach (var failedItem in failed)
                 {
-                    this.logger.WriteLine($"    @red@* {System.IO.Path.GetFileName(failedItem)}");
+                    this.logger.WriteLine($"    @red@* {failedItem.Name}");
                 }
             }
+
+            this.syncList.Save();
 
             if (this.settings.ExitAfterSync)
             {
@@ -122,7 +127,6 @@ namespace SubSyncLib.Logic
                 .SelectMany(y => directoryInfo.GetFiles($"*{y}", SearchOption.AllDirectories)).Select(x => x.FullName)
                 .ForEach(Sync);
 
-
             if (this.settings.ExitAfterSync
                 && this.workerQueue.Count == 0
                 && this.workerQueue.Active == 0)
@@ -135,13 +139,15 @@ namespace SubSyncLib.Logic
         {
             try
             {
-                if (IsSynchronized(fullFilePath))
+                var video = new VideoFile(fullFilePath);
+
+                if (IsSynchronized(video))
                 {
                     Interlocked.Increment(ref skipped);
                     return;
                 }
 
-                this.workerQueue.Enqueue(fullFilePath);
+                this.workerQueue.Enqueue(video);
             }
             catch (Exception exc)
             {
@@ -164,34 +170,84 @@ namespace SubSyncLib.Logic
             this.Sync(e.FullPath);
         }
 
-        private bool IsSynchronized(string filePath)
+        private bool IsSynchronized(VideoFile videoFile)
         {
-            if (videoIgnore.Match(filePath))
+            if (this.settings.ResyncAll)
+            {
+                // regardless, redownload this subtitle
+                return false;
+            }
+
+            // check if in sync list
+            if (syncList.Contains(videoFile))
             {
                 return true;
             }
 
-            var fileInfo = new FileInfo(filePath);
-            if (BlacklistedFile(fileInfo.Name))
+            if (videoIgnore.Match(videoFile))
             {
                 return true;
             }
-            var directory = fileInfo.Directory;
+
+            if (BlacklistedFile(videoFile))
+            {
+                return true;
+            }
+
+            var directory = videoFile.Directory;
             if (directory == null)
             {
                 throw new NullReferenceException(nameof(directory));
             }
 
+            if (this.settings.Resync)
+            {
+                // normal --resync flag just means we want to redownload any subtitles subsync has not synced.
+                return false;
+            }
+
             return settings.SubtitleExt
                 .SelectMany(x =>
-                    directory.GetFiles($"{Path.GetFileNameWithoutExtension(fileInfo.Name)}{x}", SearchOption.AllDirectories))
+                    directory.GetFiles($"{Path.GetFileNameWithoutExtension(videoFile.Name)}{x}", SearchOption.AllDirectories))
                 .Any();
         }
 
-        private bool BlacklistedFile(string filename)
+        private bool BlacklistedFile(VideoFile video)
         {
             // todo: make this configurable. but for now, ignore all sample.<vid ext> files.
-            return Path.GetFileNameWithoutExtension(filename).Equals("sample", StringComparison.OrdinalIgnoreCase);
+            return Path.GetFileNameWithoutExtension(video.Name).Equals("sample", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    public class VideoFile
+    {
+        private readonly FileInfo fileInfo;
+
+        public VideoFile(string fullFilePath)
+        {
+            this.FilePath = fullFilePath;
+            this.fileInfo = new FileInfo(fullFilePath);
+            this.Hash = Utilities.ComputeMovieHash(fullFilePath);
+            this.HashString = Utilities.ToHexadecimal(this.Hash);
+        }
+
+        public string HashString { get; }
+        public string FilePath { get; }
+
+        public string Name => this.fileInfo.Name;
+
+        public byte[] Hash { get; private set; }
+        public VideoSubtitle Subtitle { get; private set; }
+
+
+        public DirectoryInfo Directory => this.fileInfo.Directory;
+
+        public class VideoSubtitle
+        {
+            public string FilePath { get; private set; }
+            public string Language { get; private set; }
+            public DateTime SyncDate { get; private set; }
+            public byte[] Hash { get; private set; }
         }
     }
 }

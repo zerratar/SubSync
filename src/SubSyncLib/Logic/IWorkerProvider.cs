@@ -2,6 +2,6 @@
 {
     public interface IWorkerProvider
     {
-        IWorker GetWorker(IWorkerQueue queue, string file, int tryCount = 0);
+        IWorker GetWorker(IWorkerQueue queue, VideoFile video, int tryCount = 0);
     }
 }

@@ -15,8 +15,10 @@ namespace SubSyncLib.Providers
         {
         }
 
-        public override async Task<string> GetAsync(string name, string outputDirectory)
+        public override async Task<string> GetAsync(VideoFile video)//string name, string outputDirectory)
         {
+            var name = video.Name;
+            var outputDirectory = video.Directory?.FullName ?? "./";
             var url = await FindAsync(name);
             if (string.IsNullOrEmpty(url))
             {

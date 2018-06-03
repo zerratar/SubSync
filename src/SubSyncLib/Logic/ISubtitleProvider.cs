@@ -4,6 +4,6 @@ namespace SubSyncLib.Logic
 {
     public interface ISubtitleProvider
     {
-        Task<string> GetAsync(string name, string outputDirectory);
+        Task<string> GetAsync(VideoFile video);
     }
 }

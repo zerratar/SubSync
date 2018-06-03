@@ -4,7 +4,7 @@ namespace SubSyncLib.Logic
 {
     public interface IWorkerQueue : IDisposable
     {
-        bool Enqueue(string fullFilePath);
+        bool Enqueue(VideoFile video);
         void Start();
         void Stop();
         void Reset();
