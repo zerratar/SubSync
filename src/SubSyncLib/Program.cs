@@ -32,6 +32,13 @@ namespace SubSyncLib
         public static void Main(string[] args)
         {
             var settings = Arguments.Parse<SubSyncSettings>(args);
+
+            // ugly workaround for ending backslashes with single/double-quotes. Seem to be a bug in the dotnet!
+            if (!string.IsNullOrEmpty(settings.Input) && (settings.Input.EndsWith("\"") || settings.Input.EndsWith("'")))
+            {
+                settings.Input = settings.Input.Substring(0, settings.Input.Length - 1);
+            }
+
             var subtitleExtensions = settings.SubtitleExt;
             var languages = settings.Languages;
             var input = settings.Input;
