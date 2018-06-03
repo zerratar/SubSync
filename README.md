@@ -25,11 +25,12 @@ Load up Visual Studio 2017, open SubSync.sln and hit CTRL+SHIFT+B like your life
 
 ## Running SubSync
 ```batch
-SubSync.exe <input folder> [<languages>] [<video extensions>]
+SubSync.exe <input folder> [-lang <languages>] [-vid <video extensions>] [-sub <subtitle extensions>] [-exit]
 
 <input folder>: So this is the folder you want to watch, it will also watch all its subfolders.
                 As an example: 'D:\Movies'
 
+-lang
 <languages>: A list of languages separated by a semi-colon. Example: swedish;english
              The priority of the languages is from left to right, so in this example if 
              a swedish translation subtitle is available it will take that one rather 
@@ -37,9 +38,19 @@ SubSync.exe <input folder> [<languages>] [<video extensions>]
 
              The value is just English per default.
 
+-vid
 <video extensions>: A list of video extensions to watch seperated by a semi-colon, just add
                     all you can think of. But this is an optional and default value is:
                     *.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm
+
+-sub
+<subtitle extensions>: A list of recognizable subtitle files, formatted same way as video extensions
+                       since I don't know of all possible extensions I've made this an optional parameter
+                       to change which subtitles SubSync should recognize. The default value is:
+                       *.srt;*.txt;*.sub;*.idx;*.ssa;*.ass
+
+-exit: if you don't want to keep SubSync running, you can have it automatically exit as soon as its done syncing
+       your subtitles, remember this will exit even if there are no subtitles to sync.
 ```
 
 In most cases you will probably only need to run it like this:
@@ -52,15 +63,25 @@ Or if you want to have your subtitles in another language (if one exists) and yo
 crazy enough to think you will want Latin before English.
 
 ```batch
-SubSync.exe "D:\My Awesome Movies\" spanish;japanese;latin;english
+SubSync.exe "D:\My Awesome Movies\" -lang spanish;japanese;latin;english
 ```
 
 Now keep it running in the background. Its not going to hog up your cpu. Its pretty friendly, and you can be sure to have subtitles available for you whenever you need it!
 
 ## Tips and tricks
-Press 'q' at any time to exit SubSync
+**Exiting**
+Press 'q' at any time to exit SubSync.
+Or you can supply the argument --exit to automatically close SubSync down when its done downloading subtitles.
 
-Press 'a' to try and re-sync any previously unsynced subtitles. Yes the subtitle downloads can randomly fail some times when subscene.com decides you shouldn't be downloading their subtitles too often.
+**Retrying**
+Press 'a' to try and re-sync any previously unsynced subtitles. Yes the subtitle downloads can randomly fail some times when the subtitle providers decides you shouldn't be downloading their subtitles too often.
+
+**ignoring videos**
+There is a file called .vidignore, it is a list of 1 entry per row that is being used by SubSync to completely ignore a video and not
+download any subtitles for that particular video. This can be handy when SubSync keeps failing on some videos and you don't want it
+to keep trying.
+
+The patterns are similar to .gitignore, but this only support wildcards.
 
 Oh, and be sure to bring popcorns or your favorite snacks when watching your movies!
 
@@ -71,6 +92,9 @@ The OpenSubtitles provider ignore language priority.
 Add support for http://www.yifysubtitles.com/
 
 ## Changes
+### v0.1.6.2
+Reworked the startup arguments and added an --exit flag that can be used to force quit SubSync after first sync.
+
 ### v0.1.4
 Add support for OpenSubtitles.org and is also now the default subtitle provider for SubSync. subscene.com will still be used but only if no subtitles were found on opensubtitles.org.
 Improved subtitle search algorithm, but only for OpenSubtitles.org right now. The subscene provider will be updated in a future version.

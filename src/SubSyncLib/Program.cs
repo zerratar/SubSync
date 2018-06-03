@@ -9,30 +9,32 @@ using SubSyncLib.Providers;
 [assembly: InternalsVisibleTo("SubSync.Tests")]
 namespace SubSyncLib
 {
+    public class SubSyncSettings
+    {
+        [StartupArgument(0, "./")]
+        public string Input { get; set; }
+
+        [StartupArgument("lang", "english")]
+        public HashSet<string> Languages { get; set; }
+
+        [StartupArgument("vid", "*.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm")]
+        public HashSet<string> VideoExt { get; set; }
+
+        [StartupArgument("sub", "*.srt;*.txt;*.sub;*.idx;*.ssa;*.ass")]
+        public HashSet<string> SubtitleExt { get; set; }
+
+        [StartupArgument("exit")]
+        public bool ExitAfterSync { get; set; }
+    }
+
     public class Program
     {
         public static void Main(string[] args)
         {
-            var input = "./";
-            var videoExtensions = ParseList("*.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm");
-            var subtitleExtensions = ParseList("*.srt;*.txt;*.sub;*.idx;*.ssa;*.ass");
-            var languages = ParseList("english");
-
-            if (args.Length > 0 && !string.IsNullOrEmpty(args[0]))
-            {
-                input = args[0];
-            }
-
-            if (args.Length > 1 && !string.IsNullOrEmpty(args[1]))
-            {
-                languages = ParseList(args[1]);
-            }
-
-            if (args.Length > 2 && !string.IsNullOrEmpty(args[2]))
-            {
-                videoExtensions = ParseList(args[2]);
-            }
-
+            var settings = Arguments.Parse<SubSyncSettings>(args);
+            var subtitleExtensions = settings.SubtitleExt;
+            var languages = settings.Languages;
+            var input = settings.Input;
 
             var version = GetVersion();
             var logger = new ConsoleLogger();
@@ -46,8 +48,7 @@ namespace SubSyncLib
                 var subSyncWorkerQueue = new WorkerQueue(subSyncWorkerProvider, resultReporter);
 
                 using (var mediaWatcher = new SubtitleSynchronizer(
-                    logger, subSyncWorkerQueue, resultReporter, videoIgnoreFilter,
-                    input, videoExtensions, subtitleExtensions))
+                    logger, subSyncWorkerQueue, resultReporter, videoIgnoreFilter, settings))
                 {
                     logger.WriteLine("╔════════════════════════════════════════════╗");
                     logger.WriteLine("║   @whi@SubSync v" + version.PadRight(30 - version.Length) + "@gray@         ║");
@@ -77,6 +78,7 @@ namespace SubSyncLib
             }
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static List<string> ReadVideoIgnoreList()
         {
@@ -98,15 +100,6 @@ namespace SubSyncLib
             var assembly = System.Reflection.Assembly.GetExecutingAssembly();
             var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
             return fvi.FileVersion;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static HashSet<string> ParseList(string s)
-        {
-            return new HashSet<string>(s
-                .Split(';')
-                .Select(x => x.Trim())
-                .Select(x => x.StartsWith("*") ? x.Substring(1) : x));
         }
     }
 }

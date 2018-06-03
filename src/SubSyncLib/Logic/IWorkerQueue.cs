@@ -7,6 +7,8 @@ namespace SubSyncLib.Logic
         bool Enqueue(string fullFilePath);
         void Start();
         void Stop();
-        void Reset();        
+        void Reset();
+        int Count { get; }
+        int Active { get; }
     }
 }

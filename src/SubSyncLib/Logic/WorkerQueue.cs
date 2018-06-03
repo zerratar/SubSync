@@ -17,6 +17,9 @@ namespace SubSyncLib.Logic
         private bool enabled;
         private bool disposed;
 
+        private int activeJobCount = 0;
+
+
         // the max times the same item can be enqueued.
         private const int RetryLimit = 3;
 
@@ -26,6 +29,10 @@ namespace SubSyncLib.Logic
             this.statusReporter = statusReporter;
             this.workerThread = new Thread(ProcessQueue);
         }
+
+        public int Count => this.queue.Count;
+
+        public int Active => activeJobCount;
 
         public void Dispose()
         {
@@ -74,6 +81,8 @@ namespace SubSyncLib.Logic
             {
                 while (activeJobs.Count < ConcurrentWorkers && this.queue.TryDequeue(out var worker))
                 {
+                    Interlocked.Increment(ref activeJobCount);
+
                     activeJobs.Add(worker.SyncAsync());
                 }
 
@@ -81,6 +90,8 @@ namespace SubSyncLib.Logic
                 {
                     await Task.WhenAny(activeJobs);
                     activeJobs = activeJobs.Where(x => !x.IsCompleted).ToList();
+
+                    Volatile.Write(ref activeJobCount, activeJobs.Count);
                 }
                 else
                 {

@@ -13,9 +13,7 @@ namespace SubSyncLib.Logic
         private readonly IWorkerQueue workerQueue;
         private readonly IStatusResultReporter<QueueProcessResult> statusReporter;
         private readonly IVideoIgnoreFilter videoIgnore;
-        private readonly string input;
-        private readonly HashSet<string> videoExtensions;
-        private readonly HashSet<string> subtitleExtensions;
+        private readonly SubSyncSettings settings;
         private System.IO.FileSystemWatcher fsWatcher;
         private bool disposed;
         private int skipped = 0;
@@ -25,17 +23,13 @@ namespace SubSyncLib.Logic
             IWorkerQueue workerQueue,
             IStatusResultReporter<QueueProcessResult> statusReporter,
             IVideoIgnoreFilter videoIgnore,
-            string input,
-            HashSet<string> videoExtensions,
-            HashSet<string> subtitleExtensions)
+            SubSyncSettings settings)
         {
             this.logger = logger;
             this.workerQueue = workerQueue;
             this.statusReporter = statusReporter;
             this.videoIgnore = videoIgnore;
-            this.input = input;
-            this.videoExtensions = videoExtensions;
-            this.subtitleExtensions = subtitleExtensions;
+            this.settings = settings;
         }
 
         public void Dispose()
@@ -50,7 +44,7 @@ namespace SubSyncLib.Logic
         public void Start()
         {
             if (this.fsWatcher != null) return;
-            this.fsWatcher = new System.IO.FileSystemWatcher(this.input, "*.*");
+            this.fsWatcher = new System.IO.FileSystemWatcher(this.settings.Input, "*.*");
             this.fsWatcher.Error += FsWatcherOnError;
             this.fsWatcher.IncludeSubdirectories = true;
             this.fsWatcher.EnableRaisingEvents = true;
@@ -63,6 +57,12 @@ namespace SubSyncLib.Logic
             this.statusReporter.OnReportFinished += ResultReport;
             this.workerQueue.Start();
             this.SyncAll();
+        }
+
+        private void StopAndExit()
+        {
+            this.Stop();
+            Environment.Exit(0);
         }
 
         public void Stop()
@@ -107,14 +107,28 @@ namespace SubSyncLib.Logic
                     this.logger.WriteLine($"    @red@* {System.IO.Path.GetFileName(failedItem)}");
                 }
             }
+
+            if (this.settings.ExitAfterSync)
+            {
+                this.StopAndExit();
+            }
         }
 
         public void SyncAll()
         {
-            var directoryInfo = new DirectoryInfo(this.input);
+            var directoryInfo = new DirectoryInfo(this.settings.Input);
             this.workerQueue.Reset();
-            this.videoExtensions.SelectMany(y => directoryInfo.GetFiles($"*{y}", SearchOption.AllDirectories)).Select(x => x.FullName)
+            this.settings.VideoExt
+                .SelectMany(y => directoryInfo.GetFiles($"*{y}", SearchOption.AllDirectories)).Select(x => x.FullName)
                 .ForEach(Sync);
+
+
+            if (this.settings.ExitAfterSync
+                && this.workerQueue.Count == 0
+                && this.workerQueue.Active == 0)
+            {
+                this.StopAndExit();
+            }
         }
 
         private void Sync(string fullFilePath)
@@ -142,7 +156,7 @@ namespace SubSyncLib.Logic
 
         private void FileCreated(object sender, FileSystemEventArgs e)
         {
-            if (!videoExtensions.Contains(System.IO.Path.GetExtension(e.FullPath)))
+            if (!settings.VideoExt.Contains(System.IO.Path.GetExtension(e.FullPath)))
             {
                 return;
             }
@@ -168,7 +182,7 @@ namespace SubSyncLib.Logic
                 throw new NullReferenceException(nameof(directory));
             }
 
-            return this.subtitleExtensions
+            return settings.SubtitleExt
                 .SelectMany(x =>
                     directory.GetFiles($"{Path.GetFileNameWithoutExtension(fileInfo.Name)}{x}", SearchOption.AllDirectories))
                 .Any();
