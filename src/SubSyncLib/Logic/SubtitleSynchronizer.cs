@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using SubSyncLib.Logic.Extensions;
 
@@ -178,8 +179,8 @@ namespace SubSyncLib.Logic
                 return false;
             }
 
-            // check if in sync list
-            if (syncList.Contains(videoFile))
+
+            if (BlacklistedFile(videoFile))
             {
                 return true;
             }
@@ -189,15 +190,17 @@ namespace SubSyncLib.Logic
                 return true;
             }
 
-            if (BlacklistedFile(videoFile))
+            if (videoFile.Directory == null)
             {
-                return true;
+                throw new NullReferenceException(nameof(videoFile.Directory));
             }
 
-            var directory = videoFile.Directory;
-            if (directory == null)
+            var hasSubtitleFile = HasSubtitleFile(settings, videoFile);
+
+            // check if in sync list
+            if (syncList.Contains(videoFile) && hasSubtitleFile)
             {
-                throw new NullReferenceException(nameof(directory));
+                return true;
             }
 
             if (settings.Resync)
@@ -206,16 +209,22 @@ namespace SubSyncLib.Logic
                 return false;
             }
 
-            return settings.SubtitleExt
-                .SelectMany(x =>
-                    directory.GetFiles($"{Path.GetFileNameWithoutExtension(videoFile.Name)}{x}", SearchOption.AllDirectories))
-                .Any();
+            return hasSubtitleFile;
         }
 
-        private bool BlacklistedFile(VideoFile video)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool BlacklistedFile(VideoFile video)
         {
             // todo: make this configurable. but for now, ignore all sample.<vid ext> files.
             return Path.GetFileNameWithoutExtension(video.Name).Equals("sample", StringComparison.OrdinalIgnoreCase);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasSubtitleFile(SubSyncSettings settings, VideoFile videoFile)
+        {
+            return settings.SubtitleExt.SelectMany(x =>
+                    videoFile.Directory.GetFiles($"{Path.GetFileNameWithoutExtension(videoFile.Name)}{x}", SearchOption.AllDirectories))
+                .Any();
         }
     }
 
@@ -227,13 +236,13 @@ namespace SubSyncLib.Logic
         {
             FilePath = fullFilePath;
             fileInfo = new FileInfo(fullFilePath);
-            Hash = Utilities.ComputeMovieHash(fullFilePath);
-            HashString = Utilities.ToHexadecimal(Hash);
+            //Hash = Utilities.ComputeMovieHash(fullFilePath);
+            //HashString = Utilities.ToHexadecimal(Hash);
         }
 
         public string FilePath { get; }
-        public byte[] Hash { get; }
-        public string HashString { get; }
+        //public byte[] Hash { get; }
+        //public string HashString { get; }
         public string Name => fileInfo.Name;
         public DirectoryInfo Directory => fileInfo.Directory;
     }

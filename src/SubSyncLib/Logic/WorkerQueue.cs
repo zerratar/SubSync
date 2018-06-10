@@ -45,10 +45,10 @@ namespace SubSyncLib.Logic
 
         public bool Enqueue(VideoFile video)
         {
-            queueTries.TryGetValue(video.HashString, out var tries);
+            queueTries.TryGetValue(video.Name, out var tries);
             if (tries < RetryLimit)
             {
-                queueTries[video.HashString] = tries + 1;
+                queueTries[video.Name] = tries + 1;
                 queue.Enqueue(workerProvider.GetWorker(this, video, tries));
                 return true;
             }

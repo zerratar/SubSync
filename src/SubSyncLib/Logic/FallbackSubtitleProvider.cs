@@ -21,20 +21,20 @@ namespace SubSyncLib.Logic
 
         public async Task<string> GetAsync(VideoFile video)
         {
-            providerCache.TryGetValue(video.HashString, out var index);
+            providerCache.TryGetValue(video.Name, out var index);
             try
             {
                 var result = await _providers[index].GetAsync(video);
-                providerCache.TryRemove(video.HashString, out _);
+                providerCache.TryRemove(video.Name, out _);
                 syncList.Add(video);
                 return result;
             }
             catch (Exception exc)
             {
-                providerCache[video.HashString] = index + 1;
+                providerCache[video.Name] = index + 1;
                 if (index + 1 > MaxRetryCount || index + 1 >= _providers.Length)
                 {
-                    providerCache.TryRemove(video.HashString, out _);
+                    providerCache.TryRemove(video.Name, out _);
                     throw exc;
                 }
 

@@ -23,7 +23,7 @@ namespace SubSyncLib.Logic
         {
             lock (mutex)
             {
-                return list.Contains(video.HashString);
+                return list.Contains(video.Name);
             }
         }
 
@@ -31,7 +31,7 @@ namespace SubSyncLib.Logic
         {
             lock (mutex)
             {
-                list.Add(video.HashString);
+                list.Add(video.Name);
             }
         }
 
