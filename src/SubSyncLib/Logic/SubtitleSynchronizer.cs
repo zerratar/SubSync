@@ -122,7 +122,7 @@ namespace SubSyncLib.Logic
 
         public void SyncAll()
         {
-            var directoryInfo = new DirectoryInfo(settings.Input);
+            var directoryInfo = new SystemFilteredDirectoryInfo(settings.Input);
             workerQueue.Reset();
             settings.VideoExt
                 .SelectMany(y => directoryInfo.GetFiles($"*{y}", SearchOption.AllDirectories)).Select(x => x.FullName)
@@ -236,6 +236,7 @@ namespace SubSyncLib.Logic
         {
             FilePath = fullFilePath;
             fileInfo = new FileInfo(fullFilePath);
+
             //Hash = Utilities.ComputeMovieHash(fullFilePath);
             //HashString = Utilities.ToHexadecimal(Hash);
         }
@@ -244,6 +245,51 @@ namespace SubSyncLib.Logic
         //public byte[] Hash { get; }
         //public string HashString { get; }
         public string Name => fileInfo.Name;
-        public DirectoryInfo Directory => fileInfo.Directory;
+
+        public IDirectoryInfo Directory => new SystemFilteredDirectoryInfo(fileInfo.Directory);
+    }
+
+    public class SystemFilteredDirectoryInfo : IDirectoryInfo
+    {
+        private readonly DirectoryInfo directory;
+
+        public SystemFilteredDirectoryInfo(string path)
+        {
+            this.directory = new DirectoryInfo(path);
+        }
+
+        public SystemFilteredDirectoryInfo(DirectoryInfo directory)
+        {
+            this.directory = directory;
+        }
+
+        public string FullName => this.directory.FullName;
+
+        public IEnumerable<FileInfo> GetFiles(string pattern, SearchOption searchOptions)
+        {
+            return GetFileInfosImpl(directory, pattern, searchOptions);
+        }
+
+        private IEnumerable<FileInfo> GetFileInfosImpl(DirectoryInfo dir, string pattern, SearchOption searchOptions)
+        {
+            var files = dir.GetFiles(pattern, SearchOption.TopDirectoryOnly).ToList();
+            if (searchOptions != SearchOption.AllDirectories)
+            {
+                return files;
+            }
+
+            files.AddRange(dir
+                .GetDirectories(pattern)
+                .Where(x => !x.Attributes.HasFlag(FileAttributes.System))
+                .SelectMany(x => GetFileInfosImpl(x, pattern, SearchOption.AllDirectories)));
+
+            return files;
+        }
+    }
+
+    public interface IDirectoryInfo
+    {
+        string FullName { get; }
+        IEnumerable<FileInfo> GetFiles(string pattern, SearchOption searchOptions);
     }
 }
