@@ -59,8 +59,8 @@ namespace SubSyncLib
             var videoSyncList = new VideoSyncList();
             using (var fallbackSubtitleProvider = new FallbackSubtitleProvider(
                 videoSyncList,
-                new OpenSubtitles(languages, new FileBasedCredentialsProvider("opensubtitle.auth", logger), logger),
-                new Subscene(languages)))
+                new OpenSubtitles(languages, new FileBasedCredentialsProvider("opensubtitle.auth", logger), logger)))
+            //new Subscene(languages)))
             {
                 var resultReporter = new QueueProcessReporter();
                 var subSyncWorkerProvider = new WorkerProvider(logger, subtitleExtensions, fallbackSubtitleProvider, resultReporter);

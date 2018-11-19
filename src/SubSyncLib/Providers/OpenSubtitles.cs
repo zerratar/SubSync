@@ -86,7 +86,7 @@ namespace SubSyncLib.Providers
 
             await LoginIfRequiredAsync();
 
-            var searchResults = await SearchSubtitleAsync(name);
+            var searchResults = await SearchSubtitleAsync(video.FilePath);
             if (searchResults.Length == 0)
             {
                 throw new SubtitleNotFoundException();
@@ -178,7 +178,20 @@ namespace SubSyncLib.Providers
                     Arg("sublanguageid", languageList));
             }
 
-            return requestResult.Deserialize<Subtitle[]>();
+            var subtitles = requestResult.Deserialize<Subtitle[]>();
+            if (subtitles.Length == 0)
+            {
+                var movieHash = Utilities.ComputeMovieHash(name);                
+                var movieByteSize = new FileInfo(name).Length;
+
+                requestResult = await ApiRequest("SearchSubtitles",
+                    Arg("moviehash", Utilities.ToHexadecimal(movieHash)),
+                    Arg("moviebytesize", movieByteSize),
+                    Arg("sublanguageid", languageList));
+
+                return requestResult.Deserialize<Subtitle[]>();                
+            }
+            return subtitles;
         }
 
         private async Task<string> DownloadSubtitleAsync(Subtitle target, string outputDirectory)

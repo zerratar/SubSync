@@ -278,10 +278,14 @@ namespace SubSyncLib.Logic
                 return files;
             }
 
-            files.AddRange(dir
-                .GetDirectories(pattern)
+            var allDirs = dir
+                .GetDirectories("*", SearchOption.TopDirectoryOnly)
+                .ToList();
+
+            var allFiles = allDirs
                 .Where(x => !x.Attributes.HasFlag(FileAttributes.System))
-                .SelectMany(x => GetFileInfosImpl(x, pattern, SearchOption.AllDirectories)));
+                .SelectMany(x => GetFileInfosImpl(x, pattern, SearchOption.AllDirectories));
+            files.AddRange(allFiles);
 
             return files;
         }

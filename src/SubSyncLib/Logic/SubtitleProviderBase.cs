@@ -21,7 +21,7 @@ namespace SubSyncLib.Logic
 
         protected int RequestRetryLimit { get; set; } = 3;
 
-        protected int RequestTimeout { get; set; } = 3000;
+        protected int RequestTimeout { get; set; } = 10000;
 
         public abstract Task<string> GetAsync(VideoFile video);
 
@@ -96,6 +96,32 @@ namespace SubSyncLib.Logic
                 }
 
                 await Task.Delay(1000 * (retryCount + 1));
+
+                if (webException.Response != null)
+                {
+                    var responseStream = webException.Response.GetResponseStream();
+                    var errorMessage = "";
+                    if (responseStream != null)
+                    {
+                        using (var sr = new StreamReader(responseStream))
+                        {
+                            errorMessage = sr.ReadToEnd();
+                            if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                if (errorMessage.ToLower().Contains("too many requests"))
+                                {
+                                    throw new WebException($"Request to url: {url} failed. Too many requests");
+                                }
+                                else
+                                {
+                                    //errorMessage
+                                    throw new WebException($"Request to url: {url} failed. Server returned: {errorMessage}", webException);
+                                }
+                                
+                            }
+                        }
+                    }
+                }
                 return await DownloadStringAsync(url, ++retryCount);
             }
         }

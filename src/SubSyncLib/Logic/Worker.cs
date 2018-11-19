@@ -80,7 +80,7 @@ namespace SubSyncLib.Logic
                             outputName = await DecompressAsync(outputName);
                         }
 
-                        var finalName = Rename(outputName, Path.GetFileNameWithoutExtension(video.Name));
+                        var finalName = await RenameAsync(outputName, Path.GetFileNameWithoutExtension(video.Name));
                         logger.WriteLine(
                             $"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
                         statusReporter.Report(new WorkerStatus(true, video));
@@ -109,17 +109,36 @@ namespace SubSyncLib.Logic
 
         public void Dispose() { }
 
-        private string Rename(string fileToRename, string newFilaNameWithoutExtension)
+        private async Task<string> RenameAsync(string fileToRename, string newFilaNameWithoutExtension, bool retried = false)
         {
             var inFile = new FileInfo(fileToRename);
             var directory = inFile.Directory?.FullName ?? "./";
             var destFileName = Path.Combine(directory, newFilaNameWithoutExtension + Path.GetExtension(fileToRename));
+            if (!inFile.Exists)
+            {
+                return null;
+            }
             if (System.IO.File.Exists(destFileName))
             {
                 System.IO.File.Delete(destFileName);
             }
-            inFile.MoveTo(destFileName);
-            //File.Move(fileToRename, destFileName);
+
+            try
+            {
+                inFile.MoveTo(destFileName);
+            }
+            catch (FileNotFoundException exc)
+            {
+                // r/quityourbullshit
+                // file exists, problem is that we accessed it to quickly.
+                if (retried)
+                {
+                    return null;
+                }
+                await Task.Delay(100);
+                return await RenameAsync(fileToRename, newFilaNameWithoutExtension, true);
+            }
+
             return destFileName;
         }
 
@@ -240,7 +259,7 @@ namespace SubSyncLib.Logic
         }
 
         private Task<EntryUnpackResult> UnpackEntryAsync(IArchiveEntry entry, string directory)
-        {          
+        {
             return this.UnpackEntryAsync(entry.OpenEntryStream, entry, directory);
         }
 

@@ -38,6 +38,7 @@ namespace SubSyncLib.Logic
                     throw exc;
                 }
 
+                await Task.Delay(1000);
                 return await GetAsync(video);
             }
         }
