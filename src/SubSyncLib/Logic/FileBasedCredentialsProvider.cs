@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace SubSyncLib.Logic
 {
@@ -18,7 +19,9 @@ namespace SubSyncLib.Logic
 
         private void ReadFile()
         {
-            if (!System.IO.File.Exists(filename))
+            var appPath = AppDomain.CurrentDomain.BaseDirectory;
+            var filePath = Path.Combine(appPath, filename);
+            if (!System.IO.File.Exists(filePath))
             {
                 return;
             }
