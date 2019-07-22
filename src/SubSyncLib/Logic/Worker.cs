@@ -80,8 +80,7 @@ namespace SubSyncLib.Logic
                             outputName = await DecompressAsync(outputName);
                         }
 
-                        string nameWithoutExt = Path.GetFileNameWithoutExtension(video.Name);
-                        var finalName = await RenameAsync(outputName, nameWithoutExt);
+                        var finalName = await RenameAsync(outputName, Path.GetFileNameWithoutExtension(video.Name));
                         logger.WriteLine(
                             $"@gray@Subtitle @white@{Path.GetFileName(finalName)} @green@downloaded!");
                         statusReporter.Report(new WorkerStatus(true, video));
@@ -115,13 +114,6 @@ namespace SubSyncLib.Logic
             var inFile = new FileInfo(fileToRename);
             var directory = inFile.Directory?.FullName ?? "./";
             var destFileName = Path.Combine(directory, newFilaNameWithoutExtension + Path.GetExtension(fileToRename));
-
-            if (fileToRename == destFileName)
-            {
-                //it's the same file, do not do anything
-                return destFileName;
-            }
-
             if (!inFile.Exists)
             {
                 return null;
