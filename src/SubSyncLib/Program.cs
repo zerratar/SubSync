@@ -11,10 +11,10 @@ namespace SubSyncLib
 {
     public class SubSyncSettings
     {
-        [StartupArgument(0, "./")]
+        [StartupArgument(0, "C:\\Users\\roberto\\Videos\\Series\\Grey's Anatomy")]
         public string Input { get; set; }
 
-        [StartupArgument("lang", "english")]
+        [StartupArgument("lang", "spanish")]
         public HashSet<string> Languages { get; set; }
 
         [StartupArgument("vid", "*.avi;*.mp4;*.mkv;*.mpeg;*.flv;*.webm")]
