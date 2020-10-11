@@ -32,14 +32,16 @@ namespace SubSyncLib.Logic
                 var lines = System.IO.File.ReadAllLines(filename);
                 foreach (var line in lines)
                 {
-                    var data = line.Split('=');
-                    if (data[0].Equals("username", StringComparison.CurrentCultureIgnoreCase))
+                    var splitPos = line.IndexOf('=');
+                    var key = line.Substring(0, splitPos);
+                    var value = line.Substring(splitPos+1, line.Length - splitPos - 1);
+                    if (key.Equals("username", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        username = data[1];
+                        username = value;
                     }
-                    else if (data[0].Equals("password", StringComparison.CurrentCultureIgnoreCase))
+                    else if (key.Equals("password", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        password = data[1];
+                        password = value;
                     }
                 }
                 synchronizedWithFile = true;
